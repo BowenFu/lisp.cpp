@@ -26,37 +26,27 @@ public:
     virtual ~Expr() = default;
 };
 
+template <typename Value>
 class Literal : public Expr
 {
+    Value mValue;
 public:
+    Literal(Value value)
+    : mValue{value}
+    {}
     Expr& eval(Env& env) override
     {
         return *this;
     }
-};
-
-class Number : public Literal
-{
-public:
-    std::variant<int32_t, double> mNumber;
-    template <typename N>
-    Number(N n)
-    : mNumber(n)
-    {}
     std::string toString() const override
     {
         std::ostringstream o;
-        switch (mNumber.index())
-        {
-        case 0:
-            o << std::get<0>(mNumber);
-            break;
-        
-        case 1:
-            o << std::get<1>(mNumber);
-            break;
-        }
+        o << mValue;
         return o.str();
+    }
+    Value get() const
+    {
+        return mValue;
     }
 };
 
@@ -194,20 +184,13 @@ public:
 
 int32_t main()
 {
+    using Number = Literal<double>;
     auto mul = [](std::vector<std::shared_ptr<Expr>> const& args)
     {
         auto result = std::accumulate(args.begin(), args.end(), 1.0, [](auto p, std::shared_ptr<Expr> const& arg)
         {
-            auto v = dynamic_cast<Number&>(*arg);
-            switch (v.mNumber.index())
-            {
-            case 0:
-                return p * std::get<0>(v.mNumber);
-            
-            case 1:
-                return p * std::get<1>(v.mNumber);
-            }
-            return 1.0;
+            auto num = dynamic_cast<Number&>(*arg);
+            return p * num.get();
         }
         );
         return std::shared_ptr<Expr>(new Number(result)); 
