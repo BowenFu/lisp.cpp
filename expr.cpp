@@ -36,7 +36,13 @@ public:
         }
         assert(false);
     }
-    ExprPtr setVariableValue(Variable const* variable, ExprPtr value);
+    ExprPtr setVariableValue(Variable const* variable, ExprPtr value)
+    {
+        auto iter = mFrame.find(variable);
+        assert(iter != mFrame.end());
+        iter->second = value;
+        return value;
+    }
     ExprPtr defineVariable(Variable const* variable, ExprPtr value)
     {
         auto iter = mFrame.find(variable);
@@ -116,20 +122,23 @@ public:
 
 class Assignment final : public Expr
 {
-    std::shared_ptr<Variable> mVariable;
+    Variable const& mVariable;
     std::shared_ptr<Expr> mValue;
 public:
+    Assignment(Variable const& var, std::shared_ptr<Expr> value)
+    : mVariable{var}
+    , mValue{value}
+    {
+    }
     ExprPtr eval(Env& env) override
     {
-        return env.setVariableValue(mVariable.get(), mValue->eval(env));
+        return env.setVariableValue(&mVariable, mValue->eval(env));
     }
-    std::string toString() const override;
+    std::string toString() const override
+    {
+        return "Assignment";
+    }
 };
-
-ExprPtr Env::setVariableValue(Variable const* variable, ExprPtr value)
-{
-    return value;
-}
 
 class Definition final : public Expr
 {
@@ -158,9 +167,9 @@ bool isTrue(ExprPtr expr)
 
 class If final : public Expr
 {
-    std::shared_ptr<Expr> mPredicate;
-    std::shared_ptr<Expr> mConsequent;
-    std::shared_ptr<Expr> mAlternative;
+    ExprPtr mPredicate;
+    ExprPtr mConsequent;
+    ExprPtr mAlternative;
 public:
     ExprPtr eval(Env& env) override
     {
@@ -171,11 +180,16 @@ public:
 
 class Sequence final : public Expr
 {
-    std::shared_ptr<Expr> mActions;
+    std::vector<ExprPtr> mActions;
 public:
     ExprPtr eval(Env& env) override
     {
-        return {};
+        assert(mActions.size() > 1);
+        for (size_t i = 0; i < mActions.size() - 1; i++)
+        {
+            mActions.at(i)->eval(env);
+        }
+        return mActions.back()->eval(env);
     }
     std::string toString() const override;
 };
@@ -200,14 +214,16 @@ public:
     std::string toString() const override;
 };
 
-class Application final : public Expr
+std::vector<ExprPtr> listOfValues(std::vector<ExprPtr> const& exprs, Env& env)
 {
-    std::shared_ptr<Expr> mOperator;
-    std::shared_ptr<Expr> mOperands;
-public:
-    ExprPtr eval(Env& env) override;
-    std::string toString() const override;
-};
+    std::vector<ExprPtr> values;
+    std::transform(exprs.begin(), exprs.end(), std::back_insert_iterator(values), [&env](ExprPtr const& e)
+    {
+        return e->eval(env);
+    }
+    );
+    return values;
+}
 
 class Procedure : public Expr
 {
@@ -268,6 +284,23 @@ ExprPtr Lambda::eval(Env& env)
     return std::shared_ptr<Expr>(new CompoundProcedure(proc));
 }
 
+class Application final : public Expr
+{
+    std::shared_ptr<Expr> mOperator;
+    std::vector<ExprPtr> mOperands;
+public:
+    ExprPtr eval(Env& env) override
+    {
+        auto op = mOperator->eval(env);
+        auto args = listOfValues(mOperands, env);
+        return dynamic_cast<Procedure&>(*op).apply(args);
+    }
+    std::string toString() const override
+    {
+        return "Application";
+    }
+};
+
 int32_t main()
 {
     using Number = Literal<double>;
@@ -287,6 +320,9 @@ int32_t main()
     Variable variableA;
     auto defA = Definition(variableA, a);
     defA.eval(env);
+    std::cout << variableA.eval(env)->toString() << std::endl;
+    auto assignA = Assignment(variableA, b);
+    assignA.eval(env);
     std::cout << variableA.eval(env)->toString() << std::endl;
     auto mulOp = ExprPtr{new PrimitiveProcedure{mul}};
     Variable variableMul;
