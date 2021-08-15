@@ -162,7 +162,9 @@ public:
 
 bool isTrue(ExprPtr expr)
 {
-    return true;
+    using T = Literal<bool>;
+    T const* v = dynamic_cast<T const*>(expr.get());
+    return v != nullptr && v->get();
 }
 
 class If final : public Expr
