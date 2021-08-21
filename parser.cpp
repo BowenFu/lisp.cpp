@@ -16,6 +16,11 @@ struct Token
     std::string text;
 };
 
+bool operator==(Token const& lhs, Token const& rhs)
+{
+    return lhs.type == rhs.type && lhs.text == rhs.text;
+}
+
 template <typename T, typename C = std::initializer_list<T>>
 bool elem(T t, C c)
 {
@@ -31,7 +36,7 @@ public:
     {}
     bool isWS(char c)
     {
-        return elem(c, {'\t', '\n', '\r'});
+        return elem(c, {' ', '\t', '\n', '\r'});
     }
     void consume()
     {
@@ -44,6 +49,7 @@ public:
             auto c = mInput.at(mPos);
             if (isWS(c))
             {
+                consume();
                 continue;
             }
             switch(c)
@@ -101,14 +107,37 @@ public:
         }
         else
         {
-            throw std::runtime_error{"Mismatch"};
+            throw std::runtime_error{"TokenType Mismatch"};
         }
     }
-    void sexpr()
+    void match(Token const& token)
+    {
+        if (mLookAhead == token)
+        {
+            consume();
+        }
+        else
+        {
+            throw std::runtime_error{"Token Mismatch"};
+        }
+    }
+    void atomic()
+    {
+        match(TokenType::kWORD);
+    }
+    void list()
     {
         match(TokenType::kL_PAREN);
         context();
         match(TokenType::kR_PAREN);
+    }
+    void sexpr()
+    {
+        if (mLookAhead.type == TokenType::kL_PAREN)
+        {
+            return list();
+        }
+        return atomic();
     }
     void context()
     {
@@ -134,11 +163,15 @@ public:
     }
     void definition()
     {
+        match({TokenType::kWORD, "define"});
         match(TokenType::kWORD);
+        sexpr();
     }
     void assignment()
     {
+        match({TokenType::kWORD, "set!"});
         match(TokenType::kWORD);
+        sexpr();
     }
 private:
     Lexer mInput;
@@ -147,15 +180,16 @@ private:
 
 int32_t main()
 {
-    Lexer lex("(define)");
-    // auto t = lex.nextToken();
-    // while (t.type != TokenType::kEOF)
-    // {
-    //     std::cout << t.text << std::endl;
-    //     t = lex.nextToken();
-    // }
-
+    Lexer lex("(define x 1)");
     Parser p(lex);
+    
+    auto t = lex.nextToken();
+    while (t.type != TokenType::kEOF)
+    {
+        std::cout << t.text << std::endl;
+        t = lex.nextToken();
+    }
+
     p.sexpr();
 
     return 0;
