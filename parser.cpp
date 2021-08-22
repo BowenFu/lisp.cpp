@@ -1,6 +1,8 @@
 #include <string>
 #include <sstream>
 #include <iostream>
+#include "evaluator.h"
+#include <cctype>
 
 enum class TokenType
 {
@@ -99,39 +101,61 @@ public:
     {
         mLookAhead = mInput.nextToken();
     }
-    void match(TokenType t)
+    bool match(TokenType t)
     {
         if (mLookAhead.type == t)
         {
             consume();
+            return true;
         }
         else
         {
-            throw std::runtime_error{"TokenType Mismatch"};
+            return false;
         }
     }
-    void match(Token const& token)
+    bool match(Token const& token)
     {
         if (mLookAhead == token)
         {
             consume();
+            return true;
         }
         else
         {
-            throw std::runtime_error{"Token Mismatch"};
+            return false;
         }
     }
-    void atomic()
+    ExprPtr number()
     {
-        match(TokenType::kWORD);
+        double num = std::stod(mLookAhead.text);
+        auto result = ExprPtr{new Literal<double>(num)};
+        consume();
+        return result;
     }
-    void list()
+    ExprPtr variable()
     {
-        match(TokenType::kL_PAREN);
-        listContext();
-        match(TokenType::kR_PAREN);
+        auto result = ExprPtr{new Variable(mLookAhead.text)};
+        consume();
+        return result;
     }
-    void sexpr()
+    ExprPtr atomic()
+    {
+        assert(mLookAhead.type == TokenType::kWORD);
+        if (isdigit(mLookAhead.text.front()))
+        {
+            return number();
+        }
+        return variable();
+    }
+    ExprPtr list()
+    {
+        assert(match(TokenType::kL_PAREN));
+        auto result = listContext();
+        assert(result);
+        assert(match(TokenType::kR_PAREN));
+        return result;
+    }
+    ExprPtr sexpr()
     {
         if (mLookAhead.type == TokenType::kL_PAREN)
         {
@@ -139,48 +163,49 @@ public:
         }
         return atomic();
     }
-    void listContext()
+    ExprPtr listContext()
     {
         if (mLookAhead.type == TokenType::kWORD)
         {
             if (mLookAhead.text == "define")
             {
-                definition();
-                return;
+                return definition();
             }
             else if (mLookAhead.text == "set!")
             {
-                assignment();
-                return;
+                return assignment();
             }
             else
             {
-                application();
-                return;
+                return application();
             }
         }
         else
         {
             assert(!"Not implemented");
         }
+        return {};
     }
-    void definition()
+    ExprPtr definition()
     {
-        match({TokenType::kWORD, "define"});
-        match(TokenType::kWORD);
-        sexpr();
+        assert(match({TokenType::kWORD, "define"}));
+        auto var = variable();
+        auto value = sexpr();
+        return ExprPtr{new Definition(var, value)};
     }
-    void assignment()
+    ExprPtr assignment()
     {
-        match({TokenType::kWORD, "set!"});
-        match(TokenType::kWORD);
-        sexpr();
+        assert(match({TokenType::kWORD, "set!"}));
+        auto var = variable();
+        auto value = sexpr();
+        return ExprPtr{new Definition(var, value)};
     }
-    void application()
+    ExprPtr application()
     {
         match(TokenType::kWORD); // op
         // params...
         sexpr();
+        return {};
     }
 private:
     Lexer mInput;
@@ -189,7 +214,7 @@ private:
 
 int32_t main()
 {
-    Lexer lex("(define x 1)");
+    Lexer lex("(define x 1) x");
     Parser p(lex);
     
     auto t = lex.nextToken();
@@ -199,7 +224,14 @@ int32_t main()
         t = lex.nextToken();
     }
 
-    p.sexpr();
+    Env env{};
+    auto e = p.sexpr();
+    std::cout << e->toString() << std::endl;
+    std::cout << e->eval(env)->toString() << std::endl;
+
+    e = p.sexpr();
+    std::cout << e->toString() << std::endl;
+    std::cout << e->eval(env)->toString() << std::endl;
 
     return 0;
 }
