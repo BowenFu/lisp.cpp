@@ -201,7 +201,7 @@ public:
     {}
     ExprPtr eval(Env& env) override
     {
-        assert(mActions.size() > 1);
+        assert(mActions.size() >= 1);
         for (size_t i = 0; i < mActions.size() - 1; i++)
         {
             mActions.at(i)->eval(env);

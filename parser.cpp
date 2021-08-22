@@ -125,6 +125,11 @@ public:
             return false;
         }
     }
+    bool eof() const
+    {
+        return mLookAhead.type == TokenType::kEOF;
+    }
+
     ExprPtr number()
     {
         double num = std::stod(mLookAhead.text);
@@ -216,11 +221,13 @@ public:
     ExprPtr lambda()
     {
         assert(match({TokenType::kWORD, "lambda"}));
+        assert(match(TokenType::kL_PAREN));
         std::vector<std::string> params;
         while (mLookAhead.type != TokenType::kR_PAREN)
         {
             params.push_back(dynamic_cast<Variable*>(variable().get())->name());
         }
+        assert(match(TokenType::kR_PAREN));
         auto body = sequence();
         return ExprPtr{new Lambda(params, body)};
     }
@@ -242,7 +249,7 @@ private:
 
 int32_t main()
 {
-    Lexer lex("(define x 2) (* x 3)");
+    Lexer lex("(define square (lambda (y) (* y y))) (square 7)");
     Parser p(lex);
     
     auto t = lex.nextToken();
@@ -271,12 +278,16 @@ int32_t main()
     defMul.eval(env);
 
     auto e = p.sexpr();
-    std::cout << e->toString() << std::endl;
-    std::cout << e->eval(env)->toString() << std::endl;
-
-    e = p.sexpr();
-    std::cout << e->toString() << std::endl;
-    std::cout << e->eval(env)->toString() << std::endl;
-
+    while (true)
+    {
+        std::cout << e->toString() << std::endl;
+        std::cout << e->eval(env)->toString() << std::endl;
+        if (p.eof())
+        {
+            break;
+        }
+        e = p.sexpr();
+    }
+    
     return 0;
 }
