@@ -146,7 +146,8 @@ public:
     ExprPtr atomic()
     {
         assert(mLookAhead.type == TokenType::kWORD);
-        if (isdigit(mLookAhead.text.front()))
+        auto c = mLookAhead.text.front();
+        if (isdigit(c) || (mLookAhead.text.size() > 1 && c == '-'))
         {
             return number();
         }
@@ -183,6 +184,10 @@ public:
             else if (mLookAhead.text == "lambda")
             {
                 return lambda();
+            }
+            else if (mLookAhead.text == "if")
+            {
+                return if_();
             }
             else
             {
@@ -231,6 +236,14 @@ public:
         auto body = sequence();
         return ExprPtr{new Lambda(params, body)};
     }
+    ExprPtr if_()
+    {
+        assert(match({TokenType::kWORD, "if"}));
+        auto predicate = sexpr();
+        auto consequent = sexpr();
+        auto alternative = sexpr();
+        return ExprPtr{new If(predicate, consequent, alternative)};
+    }
     ExprPtr application()
     {
         auto op = sexpr();
@@ -249,15 +262,18 @@ private:
 
 int32_t main()
 {
-    Lexer lex("(define square (lambda (y) (* y y))) (square 7)");
+    // Lexer lex("(define square (lambda (y) (* y y))) (square 7)");
+    Lexer lex("(define factorial (lambda (y) (if (= y 0) 1 (* y (factorial (- y 1)))))) (factorial 5)");
     Parser p(lex);
     
+    #if 0
     auto t = lex.nextToken();
     while (t.type != TokenType::kEOF)
     {
         std::cout << t.text << std::endl;
         t = lex.nextToken();
     }
+    #endif
 
     Env env{};
 
@@ -272,10 +288,40 @@ int32_t main()
         );
         return std::shared_ptr<Expr>(new Number(result)); 
     };
-    auto mulOp = ExprPtr{new PrimitiveProcedure{mul}};
-    auto variableMul = ExprPtr{new Variable{"*"}};
-    auto defMul = Definition(variableMul, mulOp);
+    auto defMul = Definition(ExprPtr{new Variable{"*"}}, ExprPtr{new PrimitiveProcedure{mul}});
     defMul.eval(env);
+
+    auto gt = [](std::vector<std::shared_ptr<Expr>> const& args)
+    {
+        assert(args.size() == 2);
+        auto num1 = dynamic_cast<Number&>(*args.at(0));
+        auto num2 = dynamic_cast<Number&>(*args.at(1));
+        using Bool = Literal<bool>;
+        return std::shared_ptr<Expr>(new Bool(num1.get() > num2.get())); 
+    };
+    auto defGT = Definition(ExprPtr{new Variable{">"}}, ExprPtr{new PrimitiveProcedure{gt}});
+    defGT.eval(env);
+
+    auto eq = [](std::vector<std::shared_ptr<Expr>> const& args)
+    {
+        assert(args.size() == 2);
+        auto num1 = dynamic_cast<Number&>(*args.at(0));
+        auto num2 = dynamic_cast<Number&>(*args.at(1));
+        using Bool = Literal<bool>;
+        return std::shared_ptr<Expr>(new Bool(num1.get() == num2.get())); 
+    };
+    auto defEQ = Definition(ExprPtr{new Variable{"="}}, ExprPtr{new PrimitiveProcedure{eq}});
+    defEQ.eval(env);
+
+    auto sub = [](std::vector<std::shared_ptr<Expr>> const& args)
+    {
+        assert(args.size() == 2);
+        auto num1 = dynamic_cast<Number&>(*args.at(0));
+        auto num2 = dynamic_cast<Number&>(*args.at(1));
+        return std::shared_ptr<Expr>(new Number(num1.get() - num2.get())); 
+    };
+    auto defSub = Definition(ExprPtr{new Variable{"-"}}, ExprPtr{new PrimitiveProcedure{sub}});
+    defSub.eval(env);
 
     auto e = p.sexpr();
     while (true)

@@ -162,10 +162,7 @@ public:
     , mValue{value}
     {
     }
-    ExprPtr eval(Env& env) override
-    {
-        return env.defineVariable(dynamic_cast<Variable*>(mVariable.get())->name(), mValue->eval(env));
-    }
+    ExprPtr eval(Env& env) override;
     std::string toString() const override
     {
         return "Definition  ( " + mVariable->toString() + " : " + mValue->toString() + " )";
@@ -185,11 +182,19 @@ class If final : public Expr
     ExprPtr mConsequent;
     ExprPtr mAlternative;
 public:
+    If(ExprPtr const& predicate, ExprPtr const& consequent, ExprPtr const& alternative)
+    : mPredicate{predicate}
+    , mConsequent{consequent}
+    , mAlternative{alternative}
+    {}
     ExprPtr eval(Env& env) override
     {
         return isTrue(mPredicate->eval(env)) ? mConsequent->eval(env) : mAlternative->eval(env);
     }
-    std::string toString() const override;
+    std::string toString() const override
+    {
+        return "(if " + mPredicate->toString() + " " + mConsequent->toString() + " " + mAlternative->toString() + ")";
+    }
 };
 
 class Sequence final : public Expr
@@ -314,7 +319,7 @@ public:
     {}
     ExprPtr eval(Env& env) override
     {
-        auto op = mOperator->eval(env);
+        auto op = mOperator->eval(env)->eval(env);
         auto args = listOfValues(mOperands, env);
         return dynamic_cast<Procedure&>(*op).apply(args);
     }

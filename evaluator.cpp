@@ -6,6 +6,15 @@ ExprPtr Lambda::eval(Env& env)
     return std::shared_ptr<Expr>(new CompoundProcedure(proc));
 }
 
+ExprPtr Definition::eval(Env& env)
+{
+    if (dynamic_cast<Lambda*>(mValue.get()))
+    {
+        return env.defineVariable(dynamic_cast<Variable*>(mVariable.get())->name(), mValue);
+    }
+    return env.defineVariable(dynamic_cast<Variable*>(mVariable.get())->name(), mValue->eval(env));
+}
+
 #if 0
 int32_t main()
 {
