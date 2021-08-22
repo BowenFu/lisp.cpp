@@ -175,6 +175,10 @@ public:
             {
                 return assignment();
             }
+            else if (mLookAhead.text == "lambda")
+            {
+                return lambda();
+            }
             else
             {
                 return application();
@@ -199,6 +203,26 @@ public:
         auto var = variable();
         auto value = sexpr();
         return ExprPtr{new Definition(var, value)};
+    }
+    auto sequence()
+    {
+        std::vector<ExprPtr> actions;
+        while (mLookAhead.type != TokenType::kR_PAREN)
+        {
+            actions.push_back(sexpr());
+        }
+        return std::make_shared<Sequence>(actions);
+    }
+    ExprPtr lambda()
+    {
+        assert(match({TokenType::kWORD, "lambda"}));
+        std::vector<std::string> params;
+        while (mLookAhead.type != TokenType::kR_PAREN)
+        {
+            params.push_back(dynamic_cast<Variable*>(variable().get())->name());
+        }
+        auto body = sequence();
+        return ExprPtr{new Lambda(params, body)};
     }
     ExprPtr application()
     {

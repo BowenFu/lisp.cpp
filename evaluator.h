@@ -196,6 +196,9 @@ class Sequence final : public Expr
 {
     std::vector<ExprPtr> mActions;
 public:
+    Sequence(std::vector<ExprPtr> actions)
+    : mActions{actions}
+    {}
     ExprPtr eval(Env& env) override
     {
         assert(mActions.size() > 1);
@@ -205,14 +208,22 @@ public:
         }
         return mActions.back()->eval(env);
     }
-    std::string toString() const override;
+    std::string toString() const override
+    {
+        return "Sequence";
+    }
 };
 
 class Lambda final : public Expr
 {
-    std::vector<Variable const*> mParameters;
+    std::vector<std::string> mParameters;
     std::shared_ptr<Sequence> mBody;
 public:
+    Lambda(std::vector<std::string> const& params, std::shared_ptr<Sequence> body)
+    : mParameters{params}
+    , mBody{body}
+    {
+    }
     ExprPtr eval(Env& env) override;
     std::string toString() const override
     {
