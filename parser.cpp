@@ -128,7 +128,7 @@ public:
     void list()
     {
         match(TokenType::kL_PAREN);
-        context();
+        listContext();
         match(TokenType::kR_PAREN);
     }
     void sexpr()
@@ -139,21 +139,24 @@ public:
         }
         return atomic();
     }
-    void context()
+    void listContext()
     {
         if (mLookAhead.type == TokenType::kWORD)
         {
             if (mLookAhead.text == "define")
             {
                 definition();
+                return;
             }
             else if (mLookAhead.text == "set!")
             {
                 assignment();
+                return;
             }
             else
             {
-                assert(!"Not implemented");
+                application();
+                return;
             }
         }
         else
@@ -171,6 +174,12 @@ public:
     {
         match({TokenType::kWORD, "set!"});
         match(TokenType::kWORD);
+        sexpr();
+    }
+    void application()
+    {
+        match(TokenType::kWORD); // op
+        // params...
         sexpr();
     }
 private:
