@@ -294,9 +294,13 @@ public:
 
 class Application final : public Expr
 {
-    std::shared_ptr<Expr> mOperator;
+    ExprPtr mOperator;
     std::vector<ExprPtr> mOperands;
 public:
+    Application(ExprPtr const& op, std::vector<ExprPtr> const& params)
+    : mOperator{op}
+    , mOperands{params}
+    {}
     ExprPtr eval(Env& env) override
     {
         auto op = mOperator->eval(env);
@@ -305,7 +309,7 @@ public:
     }
     std::string toString() const override
     {
-        return "Application";
+        return "Application (" + mOperator->toString() + ")";
     }
 };
 

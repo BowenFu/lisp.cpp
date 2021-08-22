@@ -202,10 +202,14 @@ public:
     }
     ExprPtr application()
     {
-        match(TokenType::kWORD); // op
-        // params...
-        sexpr();
-        return {};
+        auto op = sexpr();
+        std::vector<ExprPtr> params;
+        while (mLookAhead.type != TokenType::kR_PAREN)
+        {
+            params.push_back(sexpr());
+        }
+        
+        return ExprPtr{new Application(op, params)};
     }
 private:
     Lexer mInput;
@@ -214,7 +218,7 @@ private:
 
 int32_t main()
 {
-    Lexer lex("(define x 1) x");
+    Lexer lex("(define x 2) (* x 3)");
     Parser p(lex);
     
     auto t = lex.nextToken();
@@ -225,6 +229,23 @@ int32_t main()
     }
 
     Env env{};
+
+    using Number = Literal<double>;
+    auto mul = [](std::vector<std::shared_ptr<Expr>> const& args)
+    {
+        auto result = std::accumulate(args.begin(), args.end(), 1.0, [](auto p, std::shared_ptr<Expr> const& arg)
+        {
+            auto num = dynamic_cast<Number&>(*arg);
+            return p * num.get();
+        }
+        );
+        return std::shared_ptr<Expr>(new Number(result)); 
+    };
+    auto mulOp = ExprPtr{new PrimitiveProcedure{mul}};
+    auto variableMul = ExprPtr{new Variable{"*"}};
+    auto defMul = Definition(variableMul, mulOp);
+    defMul.eval(env);
+
     auto e = p.sexpr();
     std::cout << e->toString() << std::endl;
     std::cout << e->eval(env)->toString() << std::endl;
