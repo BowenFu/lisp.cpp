@@ -6,7 +6,8 @@
 #include <iostream>
 #include "lisp/evaluator.h"
 #include <cctype>
-#include <cassert>
+
+#define ASSERT(_) if (!(_)) { throw std::runtime_error{#_}; }
 
 enum class TokenType
 {
@@ -165,10 +166,10 @@ public:
     }
     ExprPtr list()
     {
-        assert(match(TokenType::kL_PAREN));
+        ASSERT(match(TokenType::kL_PAREN));
         auto result = listContext();
-        assert(result);
-        assert(match(TokenType::kR_PAREN));
+        ASSERT(result);
+        ASSERT(match(TokenType::kR_PAREN));
         return result;
     }
     ExprPtr sexpr()
@@ -216,14 +217,14 @@ public:
     }
     ExprPtr definition()
     {
-        assert(match({TokenType::kWORD, "define"}));
+        ASSERT(match({TokenType::kWORD, "define"}));
         auto var = variable();
         auto value = sexpr();
         return ExprPtr{new Definition(var, value)};
     }
     ExprPtr assignment()
     {
-        assert(match({TokenType::kWORD, "set!"}));
+        ASSERT(match({TokenType::kWORD, "set!"}));
         auto var = variable();
         auto value = sexpr();
         return ExprPtr{new Definition(var, value)};
@@ -239,20 +240,20 @@ public:
     }
     ExprPtr lambda()
     {
-        assert(match({TokenType::kWORD, "lambda"}));
-        assert(match(TokenType::kL_PAREN));
+        ASSERT(match({TokenType::kWORD, "lambda"}));
+        ASSERT(match(TokenType::kL_PAREN));
         std::vector<std::string> params;
         while (mLookAhead.type != TokenType::kR_PAREN)
         {
             params.push_back(dynamic_cast<Variable*>(variable().get())->name());
         }
-        assert(match(TokenType::kR_PAREN));
+        ASSERT(match(TokenType::kR_PAREN));
         auto body = sequence();
         return ExprPtr{new Lambda(params, body)};
     }
     ExprPtr if_()
     {
-        assert(match({TokenType::kWORD, "if"}));
+        ASSERT(match({TokenType::kWORD, "if"}));
         auto predicate = sexpr();
         auto consequent = sexpr();
         auto alternative = sexpr();

@@ -1,6 +1,5 @@
 #include "lisp/parser.h"
 #include "gtest/gtest.h"
-#include <cassert>
 
 TEST(Lexer, 1)
 {
@@ -76,7 +75,7 @@ TEST(Parser, 2)
 
     auto gt = [](std::vector<std::shared_ptr<Expr>> const& args)
     {
-        assert(args.size() == 2);
+        ASSERT(args.size() == 2);
         auto num1 = dynamic_cast<Number&>(*args.at(0));
         auto num2 = dynamic_cast<Number&>(*args.at(1));
         using Bool = Literal<bool>;
@@ -87,7 +86,7 @@ TEST(Parser, 2)
 
     auto eq = [](std::vector<std::shared_ptr<Expr>> const& args)
     {
-        assert(args.size() == 2);
+        ASSERT(args.size() == 2);
         auto num1 = dynamic_cast<Number&>(*args.at(0));
         auto num2 = dynamic_cast<Number&>(*args.at(1));
         using Bool = Literal<bool>;
@@ -98,7 +97,7 @@ TEST(Parser, 2)
 
     auto sub = [](std::vector<std::shared_ptr<Expr>> const& args)
     {
-        assert(args.size() == 2);
+        ASSERT(args.size() == 2);
         auto num1 = dynamic_cast<Number&>(*args.at(0));
         auto num2 = dynamic_cast<Number&>(*args.at(1));
         return std::shared_ptr<Expr>(new Number(num1.get() - num2.get())); 
