@@ -1,18 +1,14 @@
-#include "evaluator.h"
+#include "lisp/evaluator.h"
 
-ExprPtr Lambda::eval(Env& env)
+ExprPtr Lambda::eval(std::shared_ptr<Env> const& env)
 {
-    CompoundProcedure proc{mBody, mParameters, std::make_shared<Env>(env)};
+    CompoundProcedure proc{mBody, mParameters, env};
     return std::shared_ptr<Expr>(new CompoundProcedure(proc));
 }
 
-ExprPtr Definition::eval(Env& env)
+ExprPtr Definition::eval(std::shared_ptr<Env> const& env)
 {
-    if (dynamic_cast<Lambda*>(mValue.get()))
-    {
-        return env.defineVariable(dynamic_cast<Variable*>(mVariable.get())->name(), mValue);
-    }
-    return env.defineVariable(dynamic_cast<Variable*>(mVariable.get())->name(), mValue->eval(env));
+    return env->defineVariable(dynamic_cast<Variable*>(mVariable.get())->name(), mValue->eval(env));
 }
 
 #if 0

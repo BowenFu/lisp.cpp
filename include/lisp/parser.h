@@ -1,8 +1,13 @@
+#ifndef LISP_PARSER_H
+#define LISP_PARSER_H
+
 #include <string>
 #include <sstream>
 #include <iostream>
-#include "evaluator.h"
+#include "lisp/evaluator.h"
 #include <cctype>
+
+#define ASSERT(_) if (!(_)) { throw std::runtime_error{#_}; }
 
 enum class TokenType
 {
@@ -18,7 +23,7 @@ struct Token
     std::string text;
 };
 
-bool operator==(Token const& lhs, Token const& rhs)
+inline bool operator==(Token const& lhs, Token const& rhs)
 {
     return lhs.type == rhs.type && lhs.text == rhs.text;
 }
@@ -82,12 +87,15 @@ public:
             consume();
         }
         std::string wordStr = word.str();
-        assert(!wordStr.empty());
+        if(wordStr.empty())
+        {
+            throw std::runtime_error{"empty word token"};
+        }
         return Token{TokenType::kWORD, wordStr};
     }
 private:
     std::string mInput;
-    int32_t mPos;
+    size_t mPos;
 };
 
 class Parser
@@ -145,7 +153,10 @@ public:
     }
     ExprPtr atomic()
     {
-        assert(mLookAhead.type == TokenType::kWORD);
+        if (mLookAhead.type != TokenType::kWORD)
+        {
+            throw std::runtime_error(mLookAhead.text);
+        }
         auto c = mLookAhead.text.front();
         if (isdigit(c) || (mLookAhead.text.size() > 1 && c == '-'))
         {
@@ -155,10 +166,10 @@ public:
     }
     ExprPtr list()
     {
-        assert(match(TokenType::kL_PAREN));
+        ASSERT(match(TokenType::kL_PAREN));
         auto result = listContext();
-        assert(result);
-        assert(match(TokenType::kR_PAREN));
+        ASSERT(result);
+        ASSERT(match(TokenType::kR_PAREN));
         return result;
     }
     ExprPtr sexpr()
@@ -194,22 +205,26 @@ public:
                 return application();
             }
         }
+        if (mLookAhead.type == TokenType::kL_PAREN)
+        {
+            return list();
+        }
         else
         {
-            assert(!"Not implemented");
+            throw std::runtime_error("Not implemented: " + mLookAhead.text);
         }
         return {};
     }
     ExprPtr definition()
     {
-        assert(match({TokenType::kWORD, "define"}));
+        ASSERT(match({TokenType::kWORD, "define"}));
         auto var = variable();
         auto value = sexpr();
         return ExprPtr{new Definition(var, value)};
     }
     ExprPtr assignment()
     {
-        assert(match({TokenType::kWORD, "set!"}));
+        ASSERT(match({TokenType::kWORD, "set!"}));
         auto var = variable();
         auto value = sexpr();
         return ExprPtr{new Definition(var, value)};
@@ -225,20 +240,20 @@ public:
     }
     ExprPtr lambda()
     {
-        assert(match({TokenType::kWORD, "lambda"}));
-        assert(match(TokenType::kL_PAREN));
+        ASSERT(match({TokenType::kWORD, "lambda"}));
+        ASSERT(match(TokenType::kL_PAREN));
         std::vector<std::string> params;
         while (mLookAhead.type != TokenType::kR_PAREN)
         {
             params.push_back(dynamic_cast<Variable*>(variable().get())->name());
         }
-        assert(match(TokenType::kR_PAREN));
+        ASSERT(match(TokenType::kR_PAREN));
         auto body = sequence();
         return ExprPtr{new Lambda(params, body)};
     }
     ExprPtr if_()
     {
-        assert(match({TokenType::kWORD, "if"}));
+        ASSERT(match({TokenType::kWORD, "if"}));
         auto predicate = sexpr();
         auto consequent = sexpr();
         auto alternative = sexpr();
@@ -260,80 +275,4 @@ private:
     Token mLookAhead;
 };
 
-int32_t main()
-{
-    // Lexer lex("(define square (lambda (y) (* y y))) (square 7)");
-    Lexer lex("(define factorial (lambda (y) (if (= y 0) 1 (* y (factorial (- y 1)))))) (factorial 5)");
-    Parser p(lex);
-    
-    #if 0
-    auto t = lex.nextToken();
-    while (t.type != TokenType::kEOF)
-    {
-        std::cout << t.text << std::endl;
-        t = lex.nextToken();
-    }
-    #endif
-
-    Env env{};
-
-    using Number = Literal<double>;
-    auto mul = [](std::vector<std::shared_ptr<Expr>> const& args)
-    {
-        auto result = std::accumulate(args.begin(), args.end(), 1.0, [](auto p, std::shared_ptr<Expr> const& arg)
-        {
-            auto num = dynamic_cast<Number&>(*arg);
-            return p * num.get();
-        }
-        );
-        return std::shared_ptr<Expr>(new Number(result)); 
-    };
-    auto defMul = Definition(ExprPtr{new Variable{"*"}}, ExprPtr{new PrimitiveProcedure{mul}});
-    defMul.eval(env);
-
-    auto gt = [](std::vector<std::shared_ptr<Expr>> const& args)
-    {
-        assert(args.size() == 2);
-        auto num1 = dynamic_cast<Number&>(*args.at(0));
-        auto num2 = dynamic_cast<Number&>(*args.at(1));
-        using Bool = Literal<bool>;
-        return std::shared_ptr<Expr>(new Bool(num1.get() > num2.get())); 
-    };
-    auto defGT = Definition(ExprPtr{new Variable{">"}}, ExprPtr{new PrimitiveProcedure{gt}});
-    defGT.eval(env);
-
-    auto eq = [](std::vector<std::shared_ptr<Expr>> const& args)
-    {
-        assert(args.size() == 2);
-        auto num1 = dynamic_cast<Number&>(*args.at(0));
-        auto num2 = dynamic_cast<Number&>(*args.at(1));
-        using Bool = Literal<bool>;
-        return std::shared_ptr<Expr>(new Bool(num1.get() == num2.get())); 
-    };
-    auto defEQ = Definition(ExprPtr{new Variable{"="}}, ExprPtr{new PrimitiveProcedure{eq}});
-    defEQ.eval(env);
-
-    auto sub = [](std::vector<std::shared_ptr<Expr>> const& args)
-    {
-        assert(args.size() == 2);
-        auto num1 = dynamic_cast<Number&>(*args.at(0));
-        auto num2 = dynamic_cast<Number&>(*args.at(1));
-        return std::shared_ptr<Expr>(new Number(num1.get() - num2.get())); 
-    };
-    auto defSub = Definition(ExprPtr{new Variable{"-"}}, ExprPtr{new PrimitiveProcedure{sub}});
-    defSub.eval(env);
-
-    auto e = p.sexpr();
-    while (true)
-    {
-        std::cout << e->toString() << std::endl;
-        std::cout << e->eval(env)->toString() << std::endl;
-        if (p.eof())
-        {
-            break;
-        }
-        e = p.sexpr();
-    }
-    
-    return 0;
-}
+#endif // LISP_PARSER_H

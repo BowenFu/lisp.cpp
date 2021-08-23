@@ -9,6 +9,8 @@
 #include <numeric>
 #include <vector>
 #include <map>
+#include <algorithm>
+#include <functional>
 
 class Expr;
 using ExprPtr = std::shared_ptr<Expr>;
@@ -37,26 +39,34 @@ public:
             }
             env = env->mEnclosingEnvironment;
         }
-        // assert(false);
         throw std::runtime_error{variableName};
     }
     ExprPtr setVariableValue(std::string const& variableName, ExprPtr value)
     {
         auto iter = mFrame.find(variableName);
-        assert(iter != mFrame.end());
+        if (iter == mFrame.end())
+        {
+            throw std::runtime_error{"call setVariableValue to undefined variables."};
+        }
         iter->second = value;
         return value;
     }
     ExprPtr defineVariable(std::string const& variableName, ExprPtr value)
     {
         auto iter = mFrame.find(variableName);
-        assert(iter == mFrame.end());
+        if (iter != mFrame.end())
+        {
+            throw std::runtime_error{"call defineVariable to defined variables."};
+        }
         mFrame.insert({variableName, value});
         return value;
     }
     std::shared_ptr<Env> extend(std::vector<std::string> const& parameters, std::vector<ExprPtr> const& arguments)
     {
-        assert(parameters.size() == arguments.size());
+        if (parameters.size() != arguments.size())
+        {
+            throw std::runtime_error{"parameters unmatched"};
+        }
         std::map<std::string, ExprPtr> frame;
         for (size_t i = 0; i < parameters.size(); ++i)
         {
@@ -71,7 +81,7 @@ public:
 class Expr
 {
 public:
-    virtual ExprPtr eval(Env& env) = 0;
+    virtual ExprPtr eval(std::shared_ptr<Env> const& env) = 0;
     virtual std::string toString() const = 0;
     virtual ~Expr() = default;
 };
@@ -84,7 +94,7 @@ public:
     Literal(Value value)
     : mValue{value}
     {}
-    ExprPtr eval(Env& env) override
+    ExprPtr eval(std::shared_ptr<Env> const& /* env */) override
     {
         return ExprPtr{new Literal(mValue)};
     }
@@ -107,9 +117,9 @@ public:
     Variable(std::string const& name)
     : mName{name}
     {}
-    ExprPtr eval(Env& env) override
+    ExprPtr eval(std::shared_ptr<Env> const& env) override
     {
-        return env.lookupVariableValue(mName);
+        return env->lookupVariableValue(mName);
     }
     std::string name() const
     {
@@ -125,7 +135,7 @@ class Quoted final : public Expr
 {
     ExprPtr mContent;
 public:
-    ExprPtr eval(Env& env) override
+    ExprPtr eval(std::shared_ptr<Env> const& /* env */) override
     {
         return mContent;
     }
@@ -142,9 +152,9 @@ public:
     , mValue{value}
     {
     }
-    ExprPtr eval(Env& env) override
+    ExprPtr eval(std::shared_ptr<Env> const& env) override
     {
-        return env.setVariableValue(dynamic_cast<Variable*>(mVariable.get())->name(), mValue->eval(env));
+        return env->setVariableValue(dynamic_cast<Variable*>(mVariable.get())->name(), mValue->eval(env));
     }
     std::string toString() const override
     {
@@ -162,7 +172,7 @@ public:
     , mValue{value}
     {
     }
-    ExprPtr eval(Env& env) override;
+    ExprPtr eval(std::shared_ptr<Env> const& env) override;
     std::string toString() const override
     {
         return "Definition  ( " + mVariable->toString() + " : " + mValue->toString() + " )";
@@ -187,7 +197,7 @@ public:
     , mConsequent{consequent}
     , mAlternative{alternative}
     {}
-    ExprPtr eval(Env& env) override
+    ExprPtr eval(std::shared_ptr<Env> const& env) override
     {
         return isTrue(mPredicate->eval(env)) ? mConsequent->eval(env) : mAlternative->eval(env);
     }
@@ -204,9 +214,8 @@ public:
     Sequence(std::vector<ExprPtr> actions)
     : mActions{actions}
     {}
-    ExprPtr eval(Env& env) override
+    ExprPtr eval(std::shared_ptr<Env> const& env) override
     {
-        assert(mActions.size() >= 1);
         for (size_t i = 0; i < mActions.size() - 1; i++)
         {
             mActions.at(i)->eval(env);
@@ -229,7 +238,7 @@ public:
     , mBody{body}
     {
     }
-    ExprPtr eval(Env& env) override;
+    ExprPtr eval(std::shared_ptr<Env> const& env) override;
     std::string toString() const override
     {
         return "Lambda";
@@ -240,11 +249,11 @@ class Cond final : public Expr
 {
     std::shared_ptr<Expr> mClauses;
 public:
-    ExprPtr eval(Env& env) override;
+    ExprPtr eval(std::shared_ptr<Env> const& env) override;
     std::string toString() const override;
 };
 
-inline std::vector<ExprPtr> listOfValues(std::vector<ExprPtr> const& exprs, Env& env)
+inline std::vector<ExprPtr> listOfValues(std::vector<ExprPtr> const& exprs, std::shared_ptr<Env> const& env)
 {
     std::vector<ExprPtr> values;
     std::transform(exprs.begin(), exprs.end(), std::back_insert_iterator(values), [&env](ExprPtr const& e)
@@ -269,7 +278,7 @@ public:
     PrimitiveProcedure(Func func)
     : mImplementation{func}
     {}
-    ExprPtr eval(Env& env) override
+    ExprPtr eval(std::shared_ptr<Env> const& /* env */) override
     {
         return ExprPtr{new PrimitiveProcedure{mImplementation}};
     }
@@ -289,18 +298,18 @@ class CompoundProcedure : public Procedure
     std::vector<std::string> mParameters;
     std::shared_ptr<Env> mEnvironment;
 public:
-    CompoundProcedure(std::shared_ptr<Sequence> body, std::vector<std::string> parameters, std::shared_ptr<Env> environment)
+    CompoundProcedure(std::shared_ptr<Sequence> body, std::vector<std::string> parameters, std::shared_ptr<Env> const& environment)
     : mBody{body}
     , mParameters{parameters}
     , mEnvironment{environment}
     {}
-    ExprPtr eval(Env& env) override
+    ExprPtr eval(std::shared_ptr<Env> const& /* env */) override
     {
         return ExprPtr{new CompoundProcedure{mBody, mParameters, mEnvironment}};
     }
     std::shared_ptr<Expr> apply(std::vector<std::shared_ptr<Expr>> const& args) override
     {
-        return mBody->eval(*mEnvironment->extend(mParameters, args));
+        return mBody->eval(mEnvironment->extend(mParameters, args));
     }
     std::string toString() const override
     {
@@ -317,9 +326,9 @@ public:
     : mOperator{op}
     , mOperands{params}
     {}
-    ExprPtr eval(Env& env) override
+    ExprPtr eval(std::shared_ptr<Env> const& env) override
     {
-        auto op = mOperator->eval(env)->eval(env);
+        auto op = mOperator->eval(env);
         auto args = listOfValues(mOperands, env);
         return dynamic_cast<Procedure&>(*op).apply(args);
     }
