@@ -275,7 +275,7 @@ int32_t main()
     }
     #endif
 
-    Env env{};
+    auto env = std::make_shared<Env>();
 
     using Number = Literal<double>;
     auto mul = [](std::vector<std::shared_ptr<Expr>> const& args)
