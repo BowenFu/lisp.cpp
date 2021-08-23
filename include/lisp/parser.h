@@ -6,7 +6,7 @@
 #include <iostream>
 #include "lisp/evaluator.h"
 #include <cctype>
-#include <cstdlib>
+#include <cassert>
 
 enum class TokenType
 {

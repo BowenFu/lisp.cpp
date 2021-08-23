@@ -1,6 +1,6 @@
 #include "lisp/parser.h"
 #include "gtest/gtest.h"
-#include <cstdlib>
+#include <cassert>
 
 TEST(Lexer, 1)
 {
