@@ -10,6 +10,7 @@
 #include <vector>
 #include <map>
 #include <algorithm>
+#include <functional>
 
 class Expr;
 using ExprPtr = std::shared_ptr<Expr>;
