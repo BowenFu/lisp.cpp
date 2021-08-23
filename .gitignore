@@ -30,3 +30,16 @@
 *.exe
 *.out
 *.app
+
+_deps/
+.vscode/*
+**/CMakeFiles
+**/cmake_install*
+**/CTest*
+**/*Cache*
+**/unittests*cmake
+Dart*
+Testing
+log
+Makefile
+build/*
