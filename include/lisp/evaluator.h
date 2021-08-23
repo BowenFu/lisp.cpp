@@ -37,27 +37,34 @@ public:
             }
             env = env->mEnclosingEnvironment;
         }
-        // assert(false);
         throw std::runtime_error{variableName};
     }
     ExprPtr setVariableValue(std::string const& variableName, ExprPtr value)
     {
         auto iter = mFrame.find(variableName);
-        assert(iter != mFrame.end());
+        if (iter == mFrame.end())
+        {
+            throw std::runtime_error{"call setVariableValue to undefined variables."};
+        }
         iter->second = value;
         return value;
     }
     ExprPtr defineVariable(std::string const& variableName, ExprPtr value)
     {
         auto iter = mFrame.find(variableName);
-        assert(iter == mFrame.end());
-        (void)iter;
+        if (iter != mFrame.end())
+        {
+            throw std::runtime_error{"call defineVariable to defined variables."};
+        }
         mFrame.insert({variableName, value});
         return value;
     }
     std::shared_ptr<Env> extend(std::vector<std::string> const& parameters, std::vector<ExprPtr> const& arguments)
     {
-        assert(parameters.size() == arguments.size());
+        if (parameters.size() != arguments.size())
+        {
+            throw std::runtime_error{"parameters unmatched"};
+        }
         std::map<std::string, ExprPtr> frame;
         for (size_t i = 0; i < parameters.size(); ++i)
         {
@@ -207,7 +214,6 @@ public:
     {}
     ExprPtr eval(std::shared_ptr<Env> const& env) override
     {
-        assert(mActions.size() >= 1);
         for (size_t i = 0; i < mActions.size() - 1; i++)
         {
             mActions.at(i)->eval(env);

@@ -6,6 +6,7 @@
 #include <iostream>
 #include "lisp/evaluator.h"
 #include <cctype>
+#include <cstdlib>
 
 enum class TokenType
 {
@@ -85,7 +86,10 @@ public:
             consume();
         }
         std::string wordStr = word.str();
-        assert(!wordStr.empty());
+        if(wordStr.empty())
+        {
+            throw std::runtime_error{"empty word token"};
+        }
         return Token{TokenType::kWORD, wordStr};
     }
 private:
