@@ -305,7 +305,7 @@ public:
     {}
     ExprPtr eval(std::shared_ptr<Env> const& /* env */) override
     {
-        return ExprPtr{new CompoundProcedure{mBody, mParameters, mEnvironment}};
+        return ExprPtr{new CompoundProcedure{mBody, mParameters, std::shared_ptr<Env>{mEnvironment}}};
     }
     std::shared_ptr<Expr> apply(std::vector<std::shared_ptr<Expr>> const& args) override
     {
