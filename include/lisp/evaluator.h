@@ -61,8 +61,7 @@ public:
         mFrame.insert({variableName, value});
         return value;
     }
-    std::
-        extend(std::vector<std::string> const& parameters, std::vector<ExprPtr> const& arguments)
+    std::shared_ptr<Env> extend(std::vector<std::string> const& parameters, std::vector<ExprPtr> const& arguments)
     {
         if (parameters.size() != arguments.size())
         {
