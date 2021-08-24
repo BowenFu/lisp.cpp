@@ -101,7 +101,7 @@ public:
     std::string toString() const override
     {
         std::ostringstream o;
-        o << mValue;
+        o << std::boolalpha << mValue;
         return o.str();
     }
     Value get() const
