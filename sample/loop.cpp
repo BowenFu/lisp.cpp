@@ -1,11 +1,47 @@
 #include "lisp/parser.h"
 
+auto consOp = [](std::vector<std::shared_ptr<Expr>> const& args)
+{
+    ASSERT(args.size() == 2);
+    return ExprPtr{new Cons{args.at(0), args.at(1)}}; 
+};
+
+auto carOp = [](std::vector<std::shared_ptr<Expr>> const& args)
+{
+    ASSERT(args.size() == 1);
+    auto cons_ = dynamic_cast<Cons&>(*args.at(0));
+    return cons_.car(); 
+};
+
+auto cdrOp = [](std::vector<std::shared_ptr<Expr>> const& args)
+{
+    ASSERT(args.size() == 1);
+    auto cons_ = dynamic_cast<Cons&>(*args.at(0));
+    return cons_.cdr(); 
+};
+
+auto listOp = [](std::vector<std::shared_ptr<Expr>> const& args)
+{
+    auto result = nil();
+    for (auto i = args.rbegin(); i != args.rend(); ++i)
+    {
+        result = ExprPtr{new Cons{*i, result}};
+    }
+    return result;
+};
+
 auto setUpEnvironment()
 {
     auto emptyEnv = std::make_shared<Env>();
     auto primitiveProcedureNames = std::vector<std::string>{};
     auto primitiveProcedureObjects = std::vector<ExprPtr>{};
     auto initialEnv = emptyEnv->extend(primitiveProcedureNames, primitiveProcedureObjects);
+
+    initialEnv->defineVariable("cons", ExprPtr{new PrimitiveProcedure{consOp}});
+    initialEnv->defineVariable("car", ExprPtr{new PrimitiveProcedure{carOp}});
+    initialEnv->defineVariable("cdr", ExprPtr{new PrimitiveProcedure{cdrOp}});
+    initialEnv->defineVariable("list", ExprPtr{new PrimitiveProcedure{listOp}});
+
     initialEnv->defineVariable("true", true_());
     initialEnv->defineVariable("false", false_());
     return initialEnv;

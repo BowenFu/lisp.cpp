@@ -12,6 +12,12 @@ ExprPtr false_()
     return f;
 }
 
+ExprPtr nil()
+{
+    static ExprPtr n{new Nil{}};
+    return n;
+}
+
 ExprPtr Lambda::eval(std::shared_ptr<Env> const& env)
 {
     CompoundProcedure proc{mBody, mParameters, env};
