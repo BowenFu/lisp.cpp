@@ -15,7 +15,7 @@ message(STATUS "CXX_STANDARD: ${CMAKE_CXX_STANDARD}")
 
 list(APPEND
     BASE_COMPILE_FLAGS
-    "$<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:-Wall;-Wextra;-pedantic;-Werror;-Wno-shadow;-Wconversion;-Wsign-conversion;-Wno-unknown-pragmas;>"
+    "$<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:-Wall;-Wno-unknown-pragmas;-Wextra;-pedantic;-Werror;-Wno-shadow;-Wconversion;-Wsign-conversion;>"
         "$<$<CXX_COMPILER_ID:MSVC>:/W4>") # /WX for -Werror
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
