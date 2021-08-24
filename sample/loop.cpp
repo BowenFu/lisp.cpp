@@ -43,8 +43,8 @@ auto eval(std::string const& input, std::shared_ptr<Env> const& env)
     return result;
 }
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Winfinite-recursion"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winfinite-recursion"
 void driverLoop()
 {
     promptForInput(inputPrompt);
@@ -55,7 +55,7 @@ void driverLoop()
     std::cout << output << std::endl;
     driverLoop();
 }
-#pragma clang diagnostic pop
+#pragma GCC diagnostic pop
 
 int32_t main()
 {
