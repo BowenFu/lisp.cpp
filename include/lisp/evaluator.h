@@ -101,7 +101,7 @@ public:
     std::string toString() const override
     {
         std::ostringstream o;
-        o << mValue;
+        o << std::boolalpha << mValue;
         return o.str();
     }
     Value get() const
@@ -109,6 +109,12 @@ public:
         return mValue;
     }
 };
+
+using Number = Literal<double>;
+using Bool = Literal<bool>;
+
+ExprPtr true_();
+ExprPtr false_();
 
 class Variable final : public Expr
 {
@@ -158,7 +164,7 @@ public:
     }
     std::string toString() const override
     {
-        return "Assignment";
+        return "Assignment ( " + mVariable->toString() + " : " + mValue->toString() + " )";
     }
 };
 
@@ -175,7 +181,7 @@ public:
     ExprPtr eval(std::shared_ptr<Env> const& env) override;
     std::string toString() const override
     {
-        return "Definition  ( " + mVariable->toString() + " : " + mValue->toString() + " )";
+        return "Definition ( " + mVariable->toString() + " : " + mValue->toString() + " )";
     }
 };
 
@@ -309,11 +315,18 @@ public:
     }
     std::shared_ptr<Expr> apply(std::vector<std::shared_ptr<Expr>> const& args) override
     {
-        return mBody->eval(mEnvironment.lock()->extend(mParameters, args));
+        return mBody->eval(std::shared_ptr<Env>{mEnvironment}->extend(mParameters, args));
     }
     std::string toString() const override
     {
-        return "CompoundProcedure";
+        std::ostringstream o;
+        o << "CompoundProcedure (";
+        for (auto const& p : mParameters)
+        {
+            o << p << ", ";
+        }
+        o << "<procedure-env>)";
+        return o.str();
     }
 };
 
