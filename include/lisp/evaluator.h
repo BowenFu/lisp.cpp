@@ -309,7 +309,7 @@ public:
     }
     std::shared_ptr<Expr> apply(std::vector<std::shared_ptr<Expr>> const& args) override
     {
-        return mBody->eval(mEnvironment->extend(mParameters, args));
+        return mBody->eval(mEnvironment.lock()->extend(mParameters, args));
     }
     std::string toString() const override
     {
