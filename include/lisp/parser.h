@@ -200,6 +200,11 @@ public:
             {
                 return if_();
             }
+            else if (mLookAhead.text == "begin")
+            {
+                consume();
+                return std::static_pointer_cast<Expr>(sequence());
+            }
             else
             {
                 return application();
@@ -227,9 +232,9 @@ public:
         ASSERT(match({TokenType::kWORD, "set!"}));
         auto var = variable();
         auto value = sexpr();
-        return ExprPtr{new Definition(var, value)};
+        return ExprPtr{new Assignment(var, value)};
     }
-    auto sequence()
+    std::shared_ptr<Sequence> sequence()
     {
         std::vector<ExprPtr> actions;
         while (mLookAhead.type != TokenType::kR_PAREN)

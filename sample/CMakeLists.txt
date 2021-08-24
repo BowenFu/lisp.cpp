@@ -1,4 +1,5 @@
 set(lisp_SAMPLES
+loop
 )
 
 foreach(sample ${lisp_SAMPLES})
@@ -6,5 +7,4 @@ foreach(sample ${lisp_SAMPLES})
     target_compile_options(${sample} PRIVATE ${BASE_COMPILE_FLAGS})
     target_link_libraries(${sample} PRIVATE lisp)
     set_target_properties(${sample} PROPERTIES CXX_EXTENSIONS OFF)
-    add_test(${sample} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${sample})
 endforeach()

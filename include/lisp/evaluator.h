@@ -110,6 +110,12 @@ public:
     }
 };
 
+using Number = Literal<double>;
+using Bool = Literal<bool>;
+
+ExprPtr true_();
+ExprPtr false_();
+
 class Variable final : public Expr
 {
     std::string mName;
@@ -158,7 +164,7 @@ public:
     }
     std::string toString() const override
     {
-        return "Assignment";
+        return "Assignment ( " + mVariable->toString() + " : " + mValue->toString() + " )";
     }
 };
 
@@ -175,7 +181,7 @@ public:
     ExprPtr eval(std::shared_ptr<Env> const& env) override;
     std::string toString() const override
     {
-        return "Definition  ( " + mVariable->toString() + " : " + mValue->toString() + " )";
+        return "Definition ( " + mVariable->toString() + " : " + mValue->toString() + " )";
     }
 };
 
@@ -313,7 +319,14 @@ public:
     }
     std::string toString() const override
     {
-        return "CompoundProcedure";
+        std::ostringstream o;
+        o << "CompoundProcedure (";
+        for (auto const& p : mParameters)
+        {
+            o << p << ", ";
+        }
+        o << "<procedure-env>)";
+        return o.str();
     }
 };
 
