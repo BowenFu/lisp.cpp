@@ -116,6 +116,51 @@ using Bool = Literal<bool>;
 ExprPtr true_();
 ExprPtr false_();
 
+ExprPtr nil();
+
+class Nil final: public Expr
+{
+public:
+    Nil() = default;
+    ExprPtr eval(std::shared_ptr<Env> const& /* env */) override
+    {
+        return nil();
+    }
+    std::string toString() const override
+    {
+        return "nil";
+    }
+};
+
+class Cons final: public Expr
+{
+    ExprPtr mCar;
+    ExprPtr mCdr;
+public:
+    Cons(ExprPtr const& car_, ExprPtr const& cdr_)
+    : mCar{car_}
+    , mCdr{cdr_}
+    {}
+    ExprPtr eval(std::shared_ptr<Env> const& /* env */) override
+    {
+        return ExprPtr{new Cons(*this)};
+    }
+    std::string toString() const override
+    {
+        std::ostringstream o;
+        o << "Cons (" << mCar->toString() << ", " << mCdr->toString() << ")";
+        return o.str();
+    }
+    auto car() const
+    {
+        return mCar;
+    }
+    auto cdr() const
+    {
+        return mCdr;
+    }
+};
+
 class Variable final : public Expr
 {
     std::string mName;
