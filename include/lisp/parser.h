@@ -212,7 +212,7 @@ public:
         }
         if (mLookAhead.type == TokenType::kL_PAREN)
         {
-            return list();
+            return application();
         }
         else
         {
