@@ -30,6 +30,26 @@ auto listOp = [](std::vector<std::shared_ptr<Expr>> const& args)
     return result;
 };
 
+auto isNullOp = [](std::vector<std::shared_ptr<Expr>> const& args)
+{
+    ASSERT(args.size() == 1);
+    auto result = (args.at(0) == nil());
+    return result ? true_() : false_(); 
+};
+
+auto isPairOp = [](std::vector<std::shared_ptr<Expr>> const& args)
+{
+    ASSERT(args.size() == 1);
+    auto result = (dynamic_cast<Cons*>(args.at(0).get()) != nullptr);
+    return result ? true_() : false_(); 
+};
+
+auto isEqOp = [](std::vector<std::shared_ptr<Expr>> const& args)
+{
+    ASSERT(args.size() == 2);
+    return (args.at(0) == args.at(1)) ? true_() : false_(); 
+};
+
 auto setUpEnvironment()
 {
     auto emptyEnv = std::make_shared<Env>();
@@ -41,9 +61,13 @@ auto setUpEnvironment()
     initialEnv->defineVariable("car", ExprPtr{new PrimitiveProcedure{carOp}});
     initialEnv->defineVariable("cdr", ExprPtr{new PrimitiveProcedure{cdrOp}});
     initialEnv->defineVariable("list", ExprPtr{new PrimitiveProcedure{listOp}});
+    initialEnv->defineVariable("null?", ExprPtr{new PrimitiveProcedure{isNullOp}});
+    initialEnv->defineVariable("pair?", ExprPtr{new PrimitiveProcedure{isPairOp}});
+    initialEnv->defineVariable("eq?", ExprPtr{new PrimitiveProcedure{isEqOp}});
 
     initialEnv->defineVariable("true", true_());
     initialEnv->defineVariable("false", false_());
+    initialEnv->defineVariable("nil", nil());
     return initialEnv;
 }
 
@@ -88,6 +112,10 @@ void driverLoop()
     promptForInput(inputPrompt);
     std::string input;
     getline(std::cin, input);
+    if (input.empty())
+    {
+        return;
+    }
     auto output = eval(input, globalEnvironment());
     announceOutput(outputPrompt);
     std::cout << output << std::endl;
@@ -97,8 +125,18 @@ void driverLoop()
 #pragma clang diagnostic pop
 #endif
 
-int32_t main()
+int32_t main(int n, char** args)
 {
-    driverLoop();
+    if (n == 1)
+    {
+        driverLoop();
+    }
+    else
+    {
+        ASSERT(n == 2);
+        auto input = args[1];
+        auto output = eval(input, globalEnvironment());
+        std::cout << output << std::endl;
+    }
     return 0;
 }
