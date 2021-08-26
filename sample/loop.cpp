@@ -67,6 +67,8 @@ auto setUpEnvironment()
 
     initialEnv->defineVariable("true", true_());
     initialEnv->defineVariable("false", false_());
+    initialEnv->defineVariable("#t", true_());
+    initialEnv->defineVariable("#f", false_());
     initialEnv->defineVariable("nil", nil());
     return initialEnv;
 }
@@ -103,6 +105,18 @@ auto eval(std::string const& input, std::shared_ptr<Env> const& env)
     return result;
 }
 
+void preEval()
+{
+    auto defAtom = "(define atom?"
+                        "(lambda (x) "
+                        "(and (not (pair? x)) (not (null? x)))))";
+    eval(defAtom ,globalEnvironment());
+    auto defNot = "(define not"
+                        "(lambda (x) "
+                        "(if x false true)))";
+    eval(defNot ,globalEnvironment());
+}
+
 #if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Winfinite-recursion"
@@ -111,12 +125,12 @@ void driverLoop()
 {
     promptForInput(inputPrompt);
     std::string input;
-    getline(std::cin, input);
-    if (input.empty())
+    std::string allInput;
+    while (getline(std::cin, input) && !input.empty())
     {
-        return;
+        allInput += input;
     }
-    auto output = eval(input, globalEnvironment());
+    auto output = eval(allInput, globalEnvironment());
     announceOutput(outputPrompt);
     std::cout << output << std::endl;
     driverLoop();
@@ -127,6 +141,7 @@ void driverLoop()
 
 int32_t main(int n, char** args)
 {
+    preEval();
     if (n == 1)
     {
         driverLoop();

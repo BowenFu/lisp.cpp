@@ -7,8 +7,6 @@
 #include "lisp/evaluator.h"
 #include <cctype>
 
-#define ASSERT(_) if (!(_)) { throw std::runtime_error{#_}; }
-
 enum class TokenType
 {
     kL_PAREN,
@@ -200,6 +198,18 @@ public:
             {
                 return if_();
             }
+            else if (mLookAhead.text == "cond")
+            {
+                return cond();
+            }
+            else if (mLookAhead.text == "and")
+            {
+                return and_();
+            }
+            else if (mLookAhead.text == "or")
+            {
+                return or_();
+            }
             else if (mLookAhead.text == "begin")
             {
                 consume();
@@ -223,6 +233,18 @@ public:
     ExprPtr definition()
     {
         ASSERT(match({TokenType::kWORD, "define"}));
+        // define procedure
+        if (mLookAhead.type == TokenType::kL_PAREN)
+        {
+            consume();
+            auto var = variable();
+            auto params = parseParams();
+            ASSERT(match(TokenType::kR_PAREN));
+            auto body = sequence();
+            auto proc = ExprPtr{new Lambda(params, body)};
+            return ExprPtr{new Definition(var, proc)};
+        }
+        // normal definition
         auto var = variable();
         auto value = sexpr();
         return ExprPtr{new Definition(var, value)};
@@ -234,24 +256,33 @@ public:
         auto value = sexpr();
         return ExprPtr{new Assignment(var, value)};
     }
-    std::shared_ptr<Sequence> sequence()
+    std::vector<ExprPtr> parseActions()
     {
         std::vector<ExprPtr> actions;
         while (mLookAhead.type != TokenType::kR_PAREN)
         {
             actions.push_back(sexpr());
         }
-        return std::make_shared<Sequence>(actions);
+        return actions;
     }
-    ExprPtr lambda()
+    std::shared_ptr<Sequence> sequence()
     {
-        ASSERT(match({TokenType::kWORD, "lambda"}));
-        ASSERT(match(TokenType::kL_PAREN));
+        return std::make_shared<Sequence>(parseActions());
+    }
+    std::vector<std::string> parseParams()
+    {
         std::vector<std::string> params;
         while (mLookAhead.type != TokenType::kR_PAREN)
         {
             params.push_back(dynamic_cast<Variable*>(variable().get())->name());
         }
+        return params;
+    }
+    ExprPtr lambda()
+    {
+        ASSERT(match({TokenType::kWORD, "lambda"}));
+        ASSERT(match(TokenType::kL_PAREN));
+        auto params = parseParams();
         ASSERT(match(TokenType::kR_PAREN));
         auto body = sequence();
         return ExprPtr{new Lambda(params, body)};
@@ -264,15 +295,44 @@ public:
         auto alternative = sexpr();
         return ExprPtr{new If(predicate, consequent, alternative)};
     }
+    ExprPtr cond()
+    {
+        ASSERT(match({TokenType::kWORD, "cond"}));
+        std::vector<std::pair<ExprPtr, ExprPtr>> condClauses;
+        bool hasNext = true;
+        while (hasNext && mLookAhead.type != TokenType::kR_PAREN)
+        {
+            ASSERT(match(TokenType::kL_PAREN));
+            ExprPtr pred;
+            if (mLookAhead.text == "else")
+            {
+                pred = (consume(), true_());
+                hasNext = false;
+            }
+            else
+            {
+                pred = sexpr();
+            }
+            auto action = sexpr();
+            condClauses.emplace_back(pred, action);
+            ASSERT(match(TokenType::kR_PAREN));
+        }
+        return ExprPtr{new Cond(condClauses)};
+    }
+    ExprPtr and_()
+    {
+        ASSERT(match({TokenType::kWORD, "and"}));
+        return ExprPtr{new And(parseActions())};
+    }
+    ExprPtr or_()
+    {
+        ASSERT(match({TokenType::kWORD, "or"}));
+        return ExprPtr{new And(parseActions())};
+    }
     ExprPtr application()
     {
         auto op = sexpr();
-        std::vector<ExprPtr> params;
-        while (mLookAhead.type != TokenType::kR_PAREN)
-        {
-            params.push_back(sexpr());
-        }
-        
+        std::vector<ExprPtr> params = parseActions();
         return ExprPtr{new Application(op, params)};
     }
 private:
