@@ -86,6 +86,10 @@ class Expr
 public:
     virtual ExprPtr eval(std::shared_ptr<Env> const& env) = 0;
     virtual std::string toString() const = 0;
+    virtual bool equalTo(ExprPtr const&) const
+    {
+        FAIL("Not implemented");
+    }
     virtual ~Expr() = default;
 };
 
@@ -111,9 +115,19 @@ public:
     {
         return mValue;
     }
+    bool equalTo(ExprPtr const& other) const override
+    {
+        auto theOther = dynamic_cast<Literal*>(other.get());
+        if (theOther)
+        {
+            return get() == theOther->get();
+        }
+        return false;
+    }
 };
 
 using Number = Literal<double>;
+using String = Literal<std::string>;
 using Bool = Literal<bool>;
 
 ExprPtr true_();
@@ -291,7 +305,7 @@ public:
     {}
     ExprPtr eval(std::shared_ptr<Env> const& env) override
     {
-        bool const result = std::all_of(mActions.begin(), mActions.end(), [&env](auto& e){ return e->eval(env); });
+        bool const result = std::all_of(mActions.begin(), mActions.end(), [&env](auto& e){ return isTrue(e->eval(env)); });
         return result ? true_() : false_();
     }
     std::string toString() const override
@@ -309,7 +323,7 @@ public:
     {}
     ExprPtr eval(std::shared_ptr<Env> const& env) override
     {
-        bool const result = std::any_of(mActions.begin(), mActions.end(), [&env](auto& e){ return e->eval(env); });
+        bool const result = std::any_of(mActions.begin(), mActions.end(), [&env](auto& e){ return isTrue(e->eval(env)); });
         return result ? true_() : false_();
     }
     std::string toString() const override

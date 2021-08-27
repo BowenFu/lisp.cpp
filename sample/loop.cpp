@@ -47,7 +47,7 @@ auto isPairOp = [](std::vector<std::shared_ptr<Expr>> const& args)
 auto isEqOp = [](std::vector<std::shared_ptr<Expr>> const& args)
 {
     ASSERT(args.size() == 2);
-    return (args.at(0) == args.at(1)) ? true_() : false_(); 
+    return (args.at(0) == args.at(1) || (args.at(0)->equalTo(args.at(1)))) ? true_() : false_(); 
 };
 
 auto setUpEnvironment()

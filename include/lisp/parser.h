@@ -52,6 +52,10 @@ public:
         while (mPos < mInput.size())
         {
             auto c = mInput.at(mPos);
+            if (c == '"')
+            {
+                return stringToken();
+            }
             if (isWS(c))
             {
                 consume();
@@ -89,6 +93,21 @@ public:
         {
             throw std::runtime_error{"empty word token"};
         }
+        return Token{TokenType::kWORD, wordStr};
+    }
+    Token stringToken()
+    {
+        ASSERT(mInput.at(mPos) == '"');
+        size_t begin = mPos;
+        auto const endIter = std::find(mInput.begin() + static_cast<long>(mPos) + 1U, mInput.end(), '"');
+        ASSERT(endIter != mInput.end());
+        size_t end = static_cast<size_t>(endIter - mInput.begin()) + 1U;
+        std::string wordStr = mInput.substr(begin, end - begin);
+        if(wordStr.empty())
+        {
+            throw std::runtime_error{"empty word token"};
+        }
+        mPos = end;
         return Token{TokenType::kWORD, wordStr};
     }
 private:
@@ -139,7 +158,14 @@ public:
     ExprPtr number()
     {
         double num = std::stod(mLookAhead.text);
-        auto result = ExprPtr{new Literal<double>(num)};
+        auto result = ExprPtr{new Number(num)};
+        consume();
+        return result;
+    }
+    ExprPtr string()
+    {
+        auto str = mLookAhead.text.substr(1U, mLookAhead.text.size() - 2U);
+        auto result = ExprPtr{new String(str)};
         consume();
         return result;
     }
@@ -159,6 +185,10 @@ public:
         if (isdigit(c) || (mLookAhead.text.size() > 1 && c == '-'))
         {
             return number();
+        }
+        if (c == '"')
+        {
+            return string();
         }
         return variable();
     }
