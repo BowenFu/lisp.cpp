@@ -44,6 +44,40 @@ do_test(test_cond3
             ((null? l) #t)
             ((atom? (car l)) (lat? (cdr l)))
             (else #f))))
-(lat? (list 1 2 3))
+(lat? (list 1 2 (list 3)))
 "
-true)
+false)
+
+do_test(test_string1
+"
+(define member?
+    (lambda (a lat)
+        (cond
+            ((null? lat) #f)
+            (else (or (eq? (car lat) a)
+                        (member? a (cdr lat))
+            )))))
+(member? \"abc\" (list 1 \"abcd\"))
+"
+false)
+
+do_test(test_string2 " (eq? \"abc\" \"abc\") " true)
+
+do_test(test_string3
+"
+(eq? \"abc\" \"abcd\")
+"
+false)
+
+do_test(test_string4
+"
+(define member?
+    (lambda (a lat)
+        (cond
+            ((null? lat) #f)
+            (else (or (eq? (car lat) a)
+                        (member? a (cdr lat))
+            )))))
+(member? \"abc\" (list 1 \"abc\"))
+"
+false)
