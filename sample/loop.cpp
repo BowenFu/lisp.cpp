@@ -80,6 +80,14 @@ auto divOp = [](std::vector<std::shared_ptr<Expr>> const& args)
     return std::shared_ptr<Expr>(new Number(num1.get() / num2.get())); 
 };
 
+auto ltOp = [](std::vector<std::shared_ptr<Expr>> const& args)
+{
+    ASSERT(args.size() == 2);
+    auto num1 = dynamic_cast<Number&>(*args.at(0));
+    auto num2 = dynamic_cast<Number&>(*args.at(1));
+    return std::shared_ptr<Expr>(new Bool(num1.get() < num2.get())); 
+};
+
 auto setUpEnvironment()
 {
     auto emptyEnv = std::make_shared<Env>();
@@ -94,6 +102,8 @@ auto setUpEnvironment()
     initialEnv->defineVariable("null?", ExprPtr{new PrimitiveProcedure{isNullOp}});
     initialEnv->defineVariable("pair?", ExprPtr{new PrimitiveProcedure{isPairOp}});
     initialEnv->defineVariable("eq?", ExprPtr{new PrimitiveProcedure{isEqOp}});
+    initialEnv->defineVariable("=", ExprPtr{new PrimitiveProcedure{isEqOp}});
+    initialEnv->defineVariable("<", ExprPtr{new PrimitiveProcedure{ltOp}});
     initialEnv->defineVariable("+", ExprPtr{new PrimitiveProcedure{addOp}});
     initialEnv->defineVariable("*", ExprPtr{new PrimitiveProcedure{mulOp}});
     initialEnv->defineVariable("/", ExprPtr{new PrimitiveProcedure{divOp}});
