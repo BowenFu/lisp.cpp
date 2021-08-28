@@ -25,7 +25,10 @@ class Env
     std::map<std::string, ExprPtr> mFrame;
     Env* mEnclosingEnvironment;
 public:
-    Env() = default;
+    Env()
+    : mFrame{}
+    , mEnclosingEnvironment{nullptr}
+    {}
     Env(std::map<std::string, ExprPtr> frame, Env* enclosingEnvironment)
     : mFrame{frame}
     , mEnclosingEnvironment{enclosingEnvironment}
@@ -33,7 +36,7 @@ public:
     ExprPtr lookupVariableValue(std::string const& variableName)
     {
         Env* env = this;
-        while (env)
+        while (env != nullptr)
         {
             auto iter = env->mFrame.find(variableName);
             if (iter != env->mFrame.end())
@@ -42,7 +45,7 @@ public:
             }
             env = env->mEnclosingEnvironment;
         }
-        throw std::runtime_error{variableName};
+        throw std::runtime_error{variableName + " not found!"};
     }
     ExprPtr setVariableValue(std::string const& variableName, ExprPtr value)
     {
@@ -147,6 +150,10 @@ public:
     {
         return "nil";
     }
+    bool equalTo(ExprPtr const& other) const override
+    {
+        return this == other.get();
+    }
 };
 
 class Cons final: public Expr
@@ -175,6 +182,15 @@ public:
     auto cdr() const
     {
         return mCdr;
+    }
+    bool equalTo(ExprPtr const& other) const override
+    {
+        auto theOther = dynamic_cast<Cons*>(other.get());
+        if (theOther)
+        {
+            return car()->equalTo(theOther->car()) && cdr()->equalTo(theOther->cdr());
+        }
+        return false;
     }
 };
 
