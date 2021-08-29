@@ -20,7 +20,7 @@ ExprPtr nil()
 
 ExprPtr Lambda::eval(std::shared_ptr<Env> const& env)
 {
-    CompoundProcedure proc{mBody, mParameters, env};
+    CompoundProcedure proc{mBody, mParameters, mVariadic, env};
     return std::shared_ptr<Expr>(new CompoundProcedure(proc));
 }
 

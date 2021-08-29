@@ -9,6 +9,9 @@ class Env;
 
 class Variable;
 
+template <typename Iter>
+ExprPtr vecToCons(Iter begin, Iter end);
+
 class Env
 {
     std::map<std::string, ExprPtr> mFrame;
@@ -34,7 +37,7 @@ public:
             }
             env = env->mEnclosingEnvironment;
         }
-        throw std::runtime_error{variableName + " not found!"};
+        throw std::runtime_error{"variable " + variableName + " not found!"};
     }
     ExprPtr setVariableValue(std::string const& variableName, ExprPtr value)
     {
@@ -56,18 +59,33 @@ public:
         mFrame.insert({variableName, value});
         return value;
     }
-    std::shared_ptr<Env> extend(std::vector<std::string> const& parameters, std::vector<ExprPtr> const& arguments)
+    std::shared_ptr<Env> extend(std::vector<std::string> const& parameters, std::vector<ExprPtr> const& arguments, bool variadic = false)
     {
-        if (parameters.size() != arguments.size())
+        if (variadic)
         {
-            throw std::runtime_error{"parameters unmatched"};
+            ASSERT(parameters.size() <= arguments.size());
+        }
+        else
+        {
+            ASSERT(parameters.size() == arguments.size());
         }
         std::map<std::string, ExprPtr> frame;
-        for (size_t i = 0; i < parameters.size(); ++i)
+        if (!parameters.empty())
         {
-            frame.insert({parameters.at(i), arguments.at(i)});
+            for (size_t i = 0; i < parameters.size() - 1; ++i)
+            {
+                frame.insert({parameters.at(i), arguments.at(i)});
+            }
+            if (variadic)
+            {
+                frame.insert({parameters.back(), vecToCons(arguments.rbegin(), arguments.rend() - static_cast<long>(parameters.size()) + 1)});
+            }
+            else
+            {
+                frame.insert({parameters.back(), arguments.back()});
+            }
         }
-        
+
         return std::make_shared<Env>(frame, this);
     }
 };
@@ -137,7 +155,7 @@ public:
     }
     std::string toString() const override
     {
-        return "nil";
+        return "()";
     }
     bool equalTo(ExprPtr const& other) const override
     {
@@ -161,7 +179,21 @@ public:
     std::string toString() const override
     {
         std::ostringstream o;
-        o << "Cons (" << mCar->toString() << ", " << mCdr->toString() << ")";
+        o << "(" << mCar->toString();
+        if (dynamic_cast<Cons*>(mCdr.get()))
+        {
+            auto cdrStr = mCdr->toString();
+            auto cdrStrSize = cdrStr.size();
+            o << " " << cdrStr.substr(1U, cdrStrSize - 2);
+        }
+        else if (mCdr == nil())
+        {
+        }
+        else
+        {
+            o << " . " << mCdr->toString();
+        }
+        o << ")";
         return o.str();
     }
     auto car() const
@@ -182,6 +214,17 @@ public:
         return false;
     }
 };
+
+template <typename Iter>
+ExprPtr vecToCons(Iter begin, Iter end)
+{
+    auto result = nil();
+    for (auto i = begin; i != end; ++i)
+    {
+        result = ExprPtr{new Cons{*i, result}};
+    }
+    return result;
+}
 
 class Variable final : public Expr
 {
@@ -340,10 +383,12 @@ public:
 class Lambda final : public Expr
 {
     std::vector<std::string> mParameters;
+    bool mVariadic;
     std::shared_ptr<Sequence> mBody;
 public:
-    Lambda(std::vector<std::string> const& params, std::shared_ptr<Sequence> body)
+    Lambda(std::vector<std::string> const& params, bool variadic, std::shared_ptr<Sequence> body)
     : mParameters{params}
+    , mVariadic{variadic}
     , mBody{body}
     {
     }
@@ -421,28 +466,42 @@ class CompoundProcedure : public Procedure
 {
     std::shared_ptr<Sequence> mBody;
     std::vector<std::string> mParameters;
+    bool mVariadic;
     std::weak_ptr<Env> mEnvironment;
 public:
-    CompoundProcedure(std::shared_ptr<Sequence> body, std::vector<std::string> parameters, std::shared_ptr<Env> const& environment)
+    CompoundProcedure(std::shared_ptr<Sequence> body, std::vector<std::string> parameters, bool variadic, std::shared_ptr<Env> const& environment)
     : mBody{body}
     , mParameters{parameters}
+    , mVariadic{variadic}
     , mEnvironment{environment}
     {}
     ExprPtr eval(std::shared_ptr<Env> const& /* env */) override
     {
-        return ExprPtr{new CompoundProcedure{mBody, mParameters, std::shared_ptr<Env>{mEnvironment}}};
+        return ExprPtr{new CompoundProcedure{mBody, mParameters, mVariadic, std::shared_ptr<Env>{mEnvironment}}};
     }
     std::shared_ptr<Expr> apply(std::vector<std::shared_ptr<Expr>> const& args) override
     {
-        return mBody->eval(std::shared_ptr<Env>{mEnvironment}->extend(mParameters, args));
+        return mBody->eval(std::shared_ptr<Env>{mEnvironment}->extend(mParameters, args, mVariadic));
     }
     std::string toString() const override
     {
         std::ostringstream o;
         o << "CompoundProcedure (";
-        for (auto const& p : mParameters)
+        if (!mParameters.empty())
         {
-            o << p << ", ";
+            for (auto i = mParameters.begin(); i != std::prev(mParameters.end()); ++i)
+            {
+                o << *i << " ";
+            }
+            if (mVariadic)
+            {
+                o << ". ";
+            }
+            if (mParameters.size() >= 1)
+            {
+                o << mParameters.back();
+            }
+            o << ", ";
         }
         o << "<procedure-env>)";
         return o.str();
