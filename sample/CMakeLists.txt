@@ -86,7 +86,7 @@ do_test(test_remember
             (else (cons (car lat) (rember a (cdr lat)))))))
 (rember \"abc\" (list 1 \"abc\"))
 "
-"\(1, nil\)")
+"\(1\)")
 
 do_test(test_+ "(+ 137 349)" 486)
 do_test(test_+2 "(+ 2.7 10)" 12.7)
@@ -97,12 +97,11 @@ do_test(test_*2 "(* 25 4 12)" 1200)
 do_test(test_/ "(/ 10 5)" 2)
 do_test(test_nested "(+ (* 3 5) (- 10 6))" 19)
 
-# Fix me with .
-# do_test(test_cond4
-# "
-# (define (abs x)
-#     (cond ((< x 0) (- x))
-#         (else x))
-# )
-# (abs -2)
-# " 2)
+do_test(test_cond4
+"
+(define (abs x)
+    (cond ((< x 0) (- x))
+        (else x))
+)
+(abs -2)
+" 2)

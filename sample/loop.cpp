@@ -163,9 +163,12 @@ void preEval()
                         "(lambda (x) "
                         "(if x false true)))";
     eval(defNot ,globalEnvironment());
-    auto defSub = "(define -"
-                        "(lambda (x y) "
-                        "(+ x (* -1 y))))";
+    auto defSub = "(define"
+                        "(- . lst) "
+                            "(cond"
+                                "((null? (cdr lst)) (* -1 (car lst)))"
+                                "(else (+ (car lst) (* -1 (car (cdr lst)))))"
+                            "))";
     eval(defSub ,globalEnvironment());
 }
 

@@ -37,7 +37,7 @@ public:
             }
             env = env->mEnclosingEnvironment;
         }
-        throw std::runtime_error{variableName + " not found!"};
+        throw std::runtime_error{"variable " + variableName + " not found!"};
     }
     ExprPtr setVariableValue(std::string const& variableName, ExprPtr value)
     {
@@ -155,7 +155,7 @@ public:
     }
     std::string toString() const override
     {
-        return "nil";
+        return "()";
     }
     bool equalTo(ExprPtr const& other) const override
     {
@@ -179,7 +179,21 @@ public:
     std::string toString() const override
     {
         std::ostringstream o;
-        o << "Cons (" << mCar->toString() << ", " << mCdr->toString() << ")";
+        o << "(" << mCar->toString();
+        if (dynamic_cast<Cons*>(mCdr.get()))
+        {
+            auto cdrStr = mCdr->toString();
+            auto cdrStrSize = cdrStr.size();
+            o << " " << cdrStr.substr(1U, cdrStrSize - 2);
+        }
+        else if (mCdr == nil())
+        {
+        }
+        else
+        {
+            o << " . " << mCdr->toString();
+        }
+        o << ")";
         return o.str();
     }
     auto car() const
