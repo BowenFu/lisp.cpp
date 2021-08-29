@@ -178,7 +178,7 @@ TEST(vecToCons, 1)
     auto strs = {"1", ".", "2"};
     auto sexprs = meta::strToSExpr(strs);
     auto cons = vecToCons(sexprs);
-    EXPECT_EQ(cons->toString(), "Cons (1, 2)");
+    EXPECT_EQ(cons->toString(), "(1 . 2)");
 }
 
 TEST(vecToCons, 2)
@@ -186,7 +186,7 @@ TEST(vecToCons, 2)
     auto strs = {"1", "2"};
     auto sexprs = meta::strToSExpr(strs);
     auto cons = vecToCons(sexprs);
-    EXPECT_EQ(cons->toString(), "Cons (1, Cons (2, nil))");
+    EXPECT_EQ(cons->toString(), "(1 2)");
 }
 
 TEST(vecToCons, exception)
@@ -194,4 +194,35 @@ TEST(vecToCons, exception)
     auto strs = {".", "2"};
     auto sexprs = meta::strToSExpr(strs);
     EXPECT_THROW(vecToCons(sexprs), std::runtime_error);
+}
+
+TEST(MetaParser, Pair)
+{
+    std::initializer_list<std::string> expected = {"(x . y)"};
+
+    Lexer lex("(x . y)");
+    // Lexer lex("(lambda (x . y) (1 2))");
+    meta::MetaParser p(lex);
+    
+    for (auto s : expected)
+    {
+        auto e = p.sexpr();
+        EXPECT_EQ(e->toString(), s);
+    }
+    EXPECT_TRUE(p.eof());
+}
+
+TEST(MetaParser, Pair2)
+{
+    std::initializer_list<std::string> expected = {"(lambda (x . y) (1 2))"};
+
+    Lexer lex("(lambda (x . y) (1 2))");
+    meta::MetaParser p(lex);
+    
+    for (auto s : expected)
+    {
+        auto e = p.sexpr();
+        EXPECT_EQ(e->toString(), s);
+    }
+    EXPECT_TRUE(p.eof());
 }
