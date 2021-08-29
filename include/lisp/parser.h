@@ -286,7 +286,22 @@ inline std::optional<std::string> asString(MExprPtr const& mexpr)
     return {};
 }
 
-ExprPtr definition(MExprPtr const& mexpr)
+inline std::vector<std::string> parseParams(MExprPtr const& mexpr)
+{
+    std::vector<std::string> params;
+    auto me = mexpr;
+    while (me != MNil::instance())
+    {
+        auto [car, cdr] = deCons(mexpr);
+        auto opStr = asString(car);
+        ASSERT(opStr.has_value());
+        params.push_back(opStr.value());
+        me = cdr;
+    }
+    return params;
+}
+
+inline ExprPtr definition(MExprPtr const& mexpr)
 {
     auto [car, cdr] = deCons(mexpr);
     // define procedure
@@ -308,7 +323,7 @@ ExprPtr definition(MExprPtr const& mexpr)
     return ExprPtr{new Definition(var, value)};
 }
 
-ExprPtr assignment(MExprPtr const& mexpr)
+inline ExprPtr assignment(MExprPtr const& mexpr)
 {
     auto [car, cdr] = deCons(mexpr);
     auto var = asString(car).value();
@@ -318,38 +333,33 @@ ExprPtr assignment(MExprPtr const& mexpr)
     return ExprPtr{new Assignment(var, value)};
 }
 
-#if 0
-std::vector<ExprPtr> parseActions()
+inline std::vector<ExprPtr> parseActions(MExprPtr const& mexpr)
 {
     std::vector<ExprPtr> actions;
-    while (mLookAhead.type != TokenType::kR_PAREN)
+    auto me = mexpr;
+    while (me != MNil::instance())
     {
-        actions.push_back(sexpr());
+        auto [car, cdr] = deCons(mexpr);
+        actions.push_back(parse(car));
+        me = cdr;
     }
     return actions;
 }
-std::shared_ptr<Sequence> sequence()
+
+std::shared_ptr<Sequence> sequence(MExprPtr const& mexpr)
 {
-    return std::make_shared<Sequence>(parseActions());
+    return std::make_shared<Sequence>(parseActions(mexpr));
 }
-std::vector<std::string> parseParams()
+
+ExprPtr lambda(MExprPtr const& mexpr)
 {
-    std::vector<std::string> params;
-    while (mLookAhead.type != TokenType::kR_PAREN)
-    {
-        params.push_back(dynamic_cast<Variable*>(variable().get())->name());
-    }
-    return params;
-}
-ExprPtr lambda()
-{
-    ASSERT(match({TokenType::kWORD, "lambda"}));
-    ASSERT(match(TokenType::kL_PAREN));
-    auto params = parseParams();
-    ASSERT(match(TokenType::kR_PAREN));
-    auto body = sequence();
+    auto [car, cdr] = deCons(mexpr);
+    auto params = parseParams(car);
+    auto body = sequence(cdr);
     return ExprPtr{new Lambda(params, body)};
 }
+
+#if 0
 ExprPtr if_()
 {
     ASSERT(match({TokenType::kWORD, "if"}));
@@ -445,10 +455,10 @@ inline auto tryMCons(MExprPtr const& mexpr) -> ExprPtr
     {
         return assignment(cdr);
     }
-    // else if (carStr == "lambda")
-    // {
-    //     return lambda(cdr);
-    // }
+    else if (carStr == "lambda")
+    {
+        return lambda(cdr);
+    }
     // else if (carStr == "if")
     // {
     //     return if_(cdr);
