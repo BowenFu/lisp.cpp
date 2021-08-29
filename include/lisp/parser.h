@@ -405,24 +405,18 @@ inline ExprPtr cond(MExprPtr const& mexpr)
     return ExprPtr{new Cond(condClauses)};
 }
 
-#if 0
-ExprPtr and_()
+ExprPtr application(MExprPtr const& car, MExprPtr const& cdr)
 {
-    ASSERT(match({TokenType::kWORD, "and"}));
-    return ExprPtr{new And(parseActions())};
-}
-ExprPtr or_()
-{
-    ASSERT(match({TokenType::kWORD, "or"}));
-    return ExprPtr{new And(parseActions())};
-}
-ExprPtr application()
-{
-    auto op = sexpr();
-    std::vector<ExprPtr> params = parseActions();
+    auto op = parse(car);
+    std::vector<ExprPtr> params = parseActions(cdr);
     return ExprPtr{new Application(op, params)};
 }
-#endif
+
+ExprPtr application(MExprPtr const& mexpr)
+{
+    auto [car, cdr] = deCons(mexpr);
+    return application(car, cdr);
+}
 
 inline auto tryMAtomic(MExprPtr const& mexpr) -> ExprPtr
 {
@@ -459,7 +453,7 @@ inline auto tryMCons(MExprPtr const& mexpr) -> ExprPtr
     if (!carStr.has_value())
     {
         // as MCons
-        FAIL("Not implemeneted!");
+        return application(car, cdr);
     }
     if (carStr == "define")
     {
@@ -485,7 +479,7 @@ inline auto tryMCons(MExprPtr const& mexpr) -> ExprPtr
     // {
     //     return std::static_pointer_cast<Expr>(sequence(cdr));
     // }
-    FAIL("Not implemented!");
+    return application(car, cdr);
 }
 
 inline auto parse(MExprPtr const& mexpr) -> ExprPtr
