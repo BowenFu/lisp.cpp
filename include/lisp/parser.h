@@ -6,6 +6,7 @@
 #include <iostream>
 #include "lisp/evaluator.h"
 #include "lisp/lexer.h"
+#include "lisp/metaParser.h"
 #include <cctype>
 
 class Parser

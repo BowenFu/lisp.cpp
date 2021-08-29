@@ -158,3 +158,40 @@ TEST(Parser, Assignment)
     }
     EXPECT_TRUE(p.eof());
 }
+
+namespace meta
+{
+template <typename C = std::initializer_list<std::string>>
+auto strToSExpr(C const& strs)
+{
+    std::vector<SExprPtr> sexprs;
+    sexprs.reserve(strs.size());
+    std::transform(strs.begin(), strs.end(), std::back_inserter(sexprs),
+                   [](auto s)
+                   { return SExprPtr{new Atomic{s}}; });
+    return sexprs;
+}
+}
+
+TEST(vecToCons, 1)
+{
+    auto strs = {"1", ".", "2"};
+    auto sexprs = meta::strToSExpr(strs);
+    auto cons = vecToCons(sexprs);
+    EXPECT_EQ(cons->toString(), "Cons (1, 2)");
+}
+
+TEST(vecToCons, 2)
+{
+    auto strs = {"1", "2"};
+    auto sexprs = meta::strToSExpr(strs);
+    auto cons = vecToCons(sexprs);
+    EXPECT_EQ(cons->toString(), "Cons (1, Cons (2, nil))");
+}
+
+TEST(vecToCons, exception)
+{
+    auto strs = {".", "2"};
+    auto sexprs = meta::strToSExpr(strs);
+    EXPECT_THROW(vecToCons(sexprs), std::runtime_error);
+}
