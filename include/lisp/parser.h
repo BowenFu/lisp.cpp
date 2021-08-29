@@ -301,6 +301,13 @@ inline std::vector<std::string> parseParams(MExprPtr const& mexpr)
     return params;
 }
 
+inline MExprPtr listBack(MExprPtr const& mexpr)
+{
+    auto [car, cdr] = deCons(mexpr);
+    ASSERT(cdr == MNil::instance());
+    return car;
+}
+
 inline ExprPtr definition(MExprPtr const& mexpr)
 {
     auto [car, cdr] = deCons(mexpr);
@@ -317,9 +324,7 @@ inline ExprPtr definition(MExprPtr const& mexpr)
     // }
     // normal definition
     auto var = asString(car).value();
-    auto [cdrA, cdrD] = deCons(cdr);
-    ASSERT(cdrD == MNil::instance());
-    auto value = parse(cdrA);
+    auto value = parse(listBack(cdr));
     return ExprPtr{new Definition(var, value)};
 }
 
@@ -327,9 +332,7 @@ inline ExprPtr assignment(MExprPtr const& mexpr)
 {
     auto [car, cdr] = deCons(mexpr);
     auto var = asString(car).value();
-    auto [cdrA, cdrD] = deCons(cdr);
-    ASSERT(cdrD == MNil::instance());
-    auto value = parse(cdrA);
+    auto value = parse(listBack(cdr));
     return ExprPtr{new Assignment(var, value)};
 }
 
@@ -346,12 +349,12 @@ inline std::vector<ExprPtr> parseActions(MExprPtr const& mexpr)
     return actions;
 }
 
-std::shared_ptr<Sequence> sequence(MExprPtr const& mexpr)
+inline std::shared_ptr<Sequence> sequence(MExprPtr const& mexpr)
 {
     return std::make_shared<Sequence>(parseActions(mexpr));
 }
 
-ExprPtr lambda(MExprPtr const& mexpr)
+inline ExprPtr lambda(MExprPtr const& mexpr)
 {
     auto [car, cdr] = deCons(mexpr);
     auto params = parseParams(car);
@@ -359,15 +362,17 @@ ExprPtr lambda(MExprPtr const& mexpr)
     return ExprPtr{new Lambda(params, body)};
 }
 
-#if 0
-ExprPtr if_()
+inline ExprPtr if_(MExprPtr const& mexpr)
 {
-    ASSERT(match({TokenType::kWORD, "if"}));
-    auto predicate = sexpr();
-    auto consequent = sexpr();
-    auto alternative = sexpr();
+    auto [car, cdr] = deCons(mexpr);
+    auto predicate = parse(car);
+    auto [cdrA, cdrD] = deCons(cdr);
+    auto consequent = parse(cdrA);
+    auto alternative = parse(listBack(cdrD));
     return ExprPtr{new If(predicate, consequent, alternative)};
 }
+
+#if 0
 ExprPtr cond()
 {
     ASSERT(match({TokenType::kWORD, "cond"}));
@@ -459,10 +464,10 @@ inline auto tryMCons(MExprPtr const& mexpr) -> ExprPtr
     {
         return lambda(cdr);
     }
-    // else if (carStr == "if")
-    // {
-    //     return if_(cdr);
-    // }
+    else if (carStr == "if")
+    {
+        return if_(cdr);
+    }
     // else if (carStr == "cond")
     // {
     //     return cond(cdr);
