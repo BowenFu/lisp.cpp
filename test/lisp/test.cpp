@@ -1,4 +1,5 @@
 #include "lisp/metaParser.h"
+#include "lisp/parser.h"
 #include "gtest/gtest.h"
 
 TEST(Lexer, 1)
@@ -17,7 +18,6 @@ TEST(Lexer, 1)
     EXPECT_EQ(t.type, TokenType::kEOF);
 }
 
-#if 0
 TEST(Parser, 1)
 {
     std::initializer_list<std::pair<std::string, std::string>> expected = {{"Definition ( square : Lambda )", "CompoundProcedure (y, <procedure-env>)"}, {"Application (square)", "49"}};
@@ -159,7 +159,6 @@ TEST(Parser, Assignment)
     }
     EXPECT_TRUE(p.eof());
 }
-#endif
 
 template <typename C = std::initializer_list<std::string>>
 auto strToMExpr(C const& strs)
@@ -222,6 +221,59 @@ TEST(MetaParser, Pair2)
     {
         auto e = p.sexpr();
         EXPECT_EQ(e->toString(), s);
+    }
+    EXPECT_TRUE(p.eof());
+}
+
+TEST(Parser, number)
+{
+    std::initializer_list<std::pair<std::string, std::string>> expected = {{"-1.2", "-1.2"}};
+
+    Lexer lex("-1.2");
+    MetaParser p(lex);
+    
+    auto env = std::make_shared<Env>();
+    for (auto s : expected)
+    {
+        auto e = p.sexpr();
+        EXPECT_EQ(e->toString(), s.first);
+        EXPECT_EQ(eval(e, env)->toString(), s.second);
+    }
+    EXPECT_TRUE(p.eof());
+}
+
+TEST(Parser, string)
+{
+    std::initializer_list<std::pair<std::string, std::string>> expected = {{"\" - 1 . 2 () \"", " - 1 . 2 () "}};
+
+    Lexer lex("\" - 1 . 2 () \"");
+    MetaParser p(lex);
+    
+    auto env = std::make_shared<Env>();
+    for (auto s : expected)
+    {
+        auto e = p.sexpr();
+        EXPECT_EQ(e->toString(), s.first);
+        EXPECT_EQ(eval(e, env)->toString(), s.second);
+    }
+    EXPECT_TRUE(p.eof());
+}
+
+TEST(Parser, variable)
+{
+    std::initializer_list<std::pair<std::string, std::string>> expected = {{"x", "123"}};
+
+    Lexer lex("x");
+    MetaParser p(lex);
+    
+    auto env = std::make_shared<Env>();
+    env->defineVariable("x", ExprPtr{new Number{123}});
+
+    for (auto s : expected)
+    {
+        auto e = p.sexpr();
+        EXPECT_EQ(e->toString(), s.first);
+        EXPECT_EQ(eval(e, env)->toString(), s.second);
     }
     EXPECT_TRUE(p.eof());
 }

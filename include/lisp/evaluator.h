@@ -7,14 +7,6 @@ class Expr;
 using ExprPtr = std::shared_ptr<Expr>;
 class Env;
 
-// auto eval(MExprPtr const& mexpr, Env& env)
-// {
-    // if (auto e = tryLiteral(mexpr))
-    // {
-    //     return e;
-    // }
-// }
-
 class Variable;
 
 class Env

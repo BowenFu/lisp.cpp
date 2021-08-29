@@ -1,22 +1,23 @@
-#include "lisp/evaulator.h"
+#include "lisp/evaluator.h"
+#include "lisp/parser.h"
 
 auto consOp = [](std::vector<std::shared_ptr<Expr>> const& args)
 {
     ASSERT(args.size() == 2);
-    return ExprPtr{new MCons{args.at(0), args.at(1)}}; 
+    return ExprPtr{new Cons{args.at(0), args.at(1)}}; 
 };
 
 auto carOp = [](std::vector<std::shared_ptr<Expr>> const& args)
 {
     ASSERT(args.size() == 1);
-    auto cons_ = dynamic_cast<MCons&>(*args.at(0));
+    auto cons_ = dynamic_cast<Cons&>(*args.at(0));
     return cons_.car(); 
 };
 
 auto cdrOp = [](std::vector<std::shared_ptr<Expr>> const& args)
 {
     ASSERT(args.size() == 1);
-    auto cons_ = dynamic_cast<MCons&>(*args.at(0));
+    auto cons_ = dynamic_cast<Cons&>(*args.at(0));
     return cons_.cdr(); 
 };
 
@@ -25,7 +26,7 @@ auto listOp = [](std::vector<std::shared_ptr<Expr>> const& args)
     auto result = nil();
     for (auto i = args.rbegin(); i != args.rend(); ++i)
     {
-        result = ExprPtr{new MCons{*i, result}};
+        result = ExprPtr{new Cons{*i, result}};
     }
     return result;
 };
@@ -40,7 +41,7 @@ auto isNullOp = [](std::vector<std::shared_ptr<Expr>> const& args)
 auto isPairOp = [](std::vector<std::shared_ptr<Expr>> const& args)
 {
     ASSERT(args.size() == 1);
-    auto result = (dynamic_cast<MCons*>(args.at(0).get()) != nullptr);
+    auto result = (dynamic_cast<Cons*>(args.at(0).get()) != nullptr);
     return result ? true_() : false_(); 
 };
 
