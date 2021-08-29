@@ -1,4 +1,4 @@
-#include "lisp/parser.h"
+#include "lisp/metaParser.h"
 #include "gtest/gtest.h"
 
 TEST(Lexer, 1)
@@ -17,6 +17,7 @@ TEST(Lexer, 1)
     EXPECT_EQ(t.type, TokenType::kEOF);
 }
 
+#if 0
 TEST(Parser, 1)
 {
     std::initializer_list<std::pair<std::string, std::string>> expected = {{"Definition ( square : Lambda )", "CompoundProcedure (y, <procedure-env>)"}, {"Application (square)", "49"}};
@@ -158,42 +159,40 @@ TEST(Parser, Assignment)
     }
     EXPECT_TRUE(p.eof());
 }
+#endif
 
-namespace meta
-{
 template <typename C = std::initializer_list<std::string>>
-auto strToSExpr(C const& strs)
+auto strToMExpr(C const& strs)
 {
-    std::vector<SExprPtr> sexprs;
+    std::vector<MExprPtr> sexprs;
     sexprs.reserve(strs.size());
     std::transform(strs.begin(), strs.end(), std::back_inserter(sexprs),
                    [](auto s)
-                   { return SExprPtr{new Atomic{s}}; });
+                   { return MExprPtr{new MAtomic{s}}; });
     return sexprs;
 }
-}
 
-TEST(vecToCons, 1)
+TEST(vecToMCons, 1)
 {
     auto strs = {"1", ".", "2"};
-    auto sexprs = meta::strToSExpr(strs);
-    auto cons = vecToCons(sexprs);
+    auto sexprs = strToMExpr(strs);
+    auto cons = vecToMCons(sexprs);
     EXPECT_EQ(cons->toString(), "(1 . 2)");
 }
 
-TEST(vecToCons, 2)
+TEST(vecToMCons, 2)
 {
     auto strs = {"1", "2"};
-    auto sexprs = meta::strToSExpr(strs);
-    auto cons = vecToCons(sexprs);
+    auto sexprs = strToMExpr(strs);
+    auto cons = vecToMCons(sexprs);
     EXPECT_EQ(cons->toString(), "(1 2)");
 }
 
-TEST(vecToCons, exception)
+TEST(vecToMCons, exception)
 {
     auto strs = {".", "2"};
-    auto sexprs = meta::strToSExpr(strs);
-    EXPECT_THROW(vecToCons(sexprs), std::runtime_error);
+    auto sexprs = strToMExpr(strs);
+    EXPECT_THROW(vecToMCons(sexprs), std::runtime_error);
 }
 
 TEST(MetaParser, Pair)
@@ -202,7 +201,7 @@ TEST(MetaParser, Pair)
 
     Lexer lex("(x . y)");
     // Lexer lex("(lambda (x . y) (1 2))");
-    meta::MetaParser p(lex);
+    MetaParser p(lex);
     
     for (auto s : expected)
     {
@@ -217,7 +216,7 @@ TEST(MetaParser, Pair2)
     std::initializer_list<std::string> expected = {"(lambda (x . y) (\"1 () \" 2))"};
 
     Lexer lex("(lambda (x . y) (\"1 () \" 2))");
-    meta::MetaParser p(lex);
+    MetaParser p(lex);
     
     for (auto s : expected)
     {

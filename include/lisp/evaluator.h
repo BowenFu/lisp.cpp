@@ -1,22 +1,19 @@
 #ifndef LISP_EVALUATOR_H
 #define LISP_EVALUATOR_H
 
-#include <cstdlib>
-#include <memory>
-#include <sstream>
-#include <variant>
-#include <iostream>
-#include <numeric>
-#include <vector>
-#include <map>
-#include <algorithm>
-#include <functional>
-
-#define ASSERT(_) if (!(_)) { throw std::runtime_error{#_}; }
-#define FAIL(_) { throw std::runtime_error{#_}; }
+#include "lisp/meta.h"
 
 class Expr;
 using ExprPtr = std::shared_ptr<Expr>;
+class Env;
+
+// auto eval(MExprPtr const& mexpr, Env& env)
+// {
+    // if (auto e = tryLiteral(mexpr))
+    // {
+    //     return e;
+    // }
+// }
 
 class Variable;
 
