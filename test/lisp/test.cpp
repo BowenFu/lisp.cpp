@@ -214,9 +214,9 @@ TEST(MetaParser, Pair)
 
 TEST(MetaParser, Pair2)
 {
-    std::initializer_list<std::string> expected = {"(lambda (x . y) (1 2))"};
+    std::initializer_list<std::string> expected = {"(lambda (x . y) (\"1 () \" 2))"};
 
-    Lexer lex("(lambda (x . y) (1 2))");
+    Lexer lex("(lambda (x . y) (\"1 () \" 2))");
     meta::MetaParser p(lex);
     
     for (auto s : expected)
