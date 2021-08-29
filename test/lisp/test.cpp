@@ -300,7 +300,8 @@ TEST(Parser, Definition)
 
 TEST(Parser, Assignment2)
 {
-    std::initializer_list<std::array<std::string, 3>> expected = {{"(define x 1)", "Definition ( x : 1 )", "1"}, {"(set! x 2)", "Assignment ( x : 2 )", "2"}};
+    std::initializer_list<std::array<std::string, 3> > expected = {{"(define x 1)", "Definition ( x : 1 )", "1"},
+                                                                   {"(set! x 2)", "Assignment ( x : 2 )", "2"}};
 
     Lexer lex("(define x 1) (set! x 2)");
     MetaParser p(lex);
