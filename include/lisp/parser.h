@@ -5,369 +5,255 @@
 #include <sstream>
 #include <iostream>
 #include "lisp/evaluator.h"
+#include "lisp/lexer.h"
+#include "lisp/metaParser.h"
 #include <cctype>
+#include <optional>
 
-enum class TokenType
-{
-    kL_PAREN,
-    kR_PAREN,
-    kWORD,
-    kEOF
-};
+inline auto parse(MExprPtr const& mexpr) -> ExprPtr;
 
-struct Token
+inline auto deCons(MExprPtr const& mexpr)
 {
-    TokenType type;
-    std::string text;
-};
-
-inline bool operator==(Token const& lhs, Token const& rhs)
-{
-    return lhs.type == rhs.type && lhs.text == rhs.text;
+    auto cons = dynamic_cast<MCons*>(mexpr.get());
+    ASSERT(cons);
+    return std::make_pair(cons->car(), cons->cdr());
 }
 
-template <typename T, typename C = std::initializer_list<T>>
-bool elem(T t, C c)
+inline std::optional<std::string> asString(MExprPtr const& mexpr)
 {
-    return std::any_of(c.begin(), c.end(), [t](T e){ return e == t; });
+    auto atomic = dynamic_cast<MAtomic*>(mexpr.get());
+    if (atomic)
+    {
+        return atomic->get();
+    }
+    return {};
 }
 
-class Lexer
+inline std::vector<std::string> parseParams(MExprPtr const& mexpr)
 {
-public:
-    Lexer(std::string const& input)
-    : mInput{input}
-    , mPos{}
-    {}
-    bool isWS(char c)
+    std::vector<std::string> params;
+    auto me = mexpr;
+    while (me != MNil::instance())
     {
-        return elem(c, {' ', '\t', '\n', '\r'});
+        auto [car, cdr] = deCons(me);
+        auto opStr = asString(car);
+        ASSERT(opStr.has_value());
+        params.push_back(opStr.value());
+        me = cdr;
     }
-    void consume()
-    {
-        ++mPos;
-    }
-    Token nextToken()
-    {
-        while (mPos < mInput.size())
-        {
-            auto c = mInput.at(mPos);
-            if (c == '"')
-            {
-                return stringToken();
-            }
-            if (isWS(c))
-            {
-                consume();
-                continue;
-            }
-            switch(c)
-            {
-            case '(':
-                consume();
-                return Token{TokenType::kL_PAREN, std::string{c}};
-            case ')':
-                consume();
-                return Token{TokenType::kR_PAREN, std::string{c}};
-            default:
-                return wordToken();
-            }
-        }
-        return Token{TokenType::kEOF, "<EOF>"};
-    }
-    Token wordToken()
-    {
-        std::ostringstream word{};
-        while (mPos < mInput.size())
-        {
-            auto c = mInput.at(mPos);
-            if(isWS(c) || elem(c, {'(', ')'}))
-            {
-                break;
-            }
-            word << c;
-            consume();
-        }
-        std::string wordStr = word.str();
-        if(wordStr.empty())
-        {
-            throw std::runtime_error{"empty word token"};
-        }
-        return Token{TokenType::kWORD, wordStr};
-    }
-    Token stringToken()
-    {
-        ASSERT(mInput.at(mPos) == '"');
-        size_t begin = mPos;
-        auto const endIter = std::find(mInput.begin() + static_cast<long>(mPos) + 1U, mInput.end(), '"');
-        ASSERT(endIter != mInput.end());
-        size_t end = static_cast<size_t>(endIter - mInput.begin()) + 1U;
-        std::string wordStr = mInput.substr(begin, end - begin);
-        if(wordStr.empty())
-        {
-            throw std::runtime_error{"empty word token"};
-        }
-        mPos = end;
-        return Token{TokenType::kWORD, wordStr};
-    }
-private:
-    std::string mInput;
-    size_t mPos;
-};
+    return params;
+}
 
-class Parser
+inline MExprPtr listBack(MExprPtr const& mexpr)
 {
-public:
-    Parser(Lexer const& input)
-    : mInput{input}
-    , mLookAhead{mInput.nextToken()}
-    {}
-    void consume()
-    {
-        mLookAhead = mInput.nextToken();
-    }
-    bool match(TokenType t)
-    {
-        if (mLookAhead.type == t)
-        {
-            consume();
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    }
-    bool match(Token const& token)
-    {
-        if (mLookAhead == token)
-        {
-            consume();
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    }
-    bool eof() const
-    {
-        return mLookAhead.type == TokenType::kEOF;
-    }
+    auto [car, cdr] = deCons(mexpr);
+    ASSERT(cdr == MNil::instance());
+    return car;
+}
 
-    ExprPtr number()
+inline std::vector<ExprPtr> parseActions(MExprPtr const& mexpr)
+{
+    std::vector<ExprPtr> actions;
+    auto me = mexpr;
+    while (me != MNil::instance())
     {
-        double num = std::stod(mLookAhead.text);
-        auto result = ExprPtr{new Number(num)};
-        consume();
-        return result;
+        auto [car, cdr] = deCons(me);
+        actions.push_back(parse(car));
+        me = cdr;
     }
-    ExprPtr string()
+    return actions;
+}
+
+inline std::shared_ptr<Sequence> sequence(MExprPtr const& mexpr)
+{
+    return std::make_shared<Sequence>(parseActions(mexpr));
+}
+
+inline ExprPtr and_(MExprPtr const& mexpr)
+{
+    return std::make_shared<And>(parseActions(mexpr));
+}
+
+inline ExprPtr or_(MExprPtr const& mexpr)
+{
+    return std::make_shared<Or>(parseActions(mexpr));
+}
+
+inline ExprPtr definition(MExprPtr const& mexpr)
+{
+    auto [car, cdr] = deCons(mexpr);
+    auto opStr = asString(car);
+    if (!opStr.has_value())
     {
-        auto str = mLookAhead.text.substr(1U, mLookAhead.text.size() - 2U);
-        auto result = ExprPtr{new String(str)};
-        consume();
-        return result;
+        auto [carA, carD] = deCons(car);
+        auto opStr = asString(carA);
+        ASSERT(opStr.has_value());
+        auto params = parseParams(carD);
+        auto body = sequence(cdr);
+        auto proc = ExprPtr{new Lambda(params, body)};
+        return ExprPtr{new Definition(opStr.value(), proc)};
     }
-    ExprPtr variable()
+    // normal definition
+    auto value = parse(listBack(cdr));
+    return ExprPtr{new Definition(opStr.value(), value)};
+}
+
+inline ExprPtr assignment(MExprPtr const& mexpr)
+{
+    auto [car, cdr] = deCons(mexpr);
+    auto var = asString(car).value();
+    auto value = parse(listBack(cdr));
+    return ExprPtr{new Assignment(var, value)};
+}
+
+inline ExprPtr lambda(MExprPtr const& mexpr)
+{
+    auto [car, cdr] = deCons(mexpr);
+    auto params = parseParams(car);
+    auto body = sequence(cdr);
+    return ExprPtr{new Lambda(params, body)};
+}
+
+inline ExprPtr if_(MExprPtr const& mexpr)
+{
+    auto [car, cdr] = deCons(mexpr);
+    auto predicate = parse(car);
+    auto [cdrA, cdrD] = deCons(cdr);
+    auto consequent = parse(cdrA);
+    auto alternative = parse(listBack(cdrD));
+    return ExprPtr{new If(predicate, consequent, alternative)};
+}
+
+inline std::pair<ExprPtr, ExprPtr> parseCondClauses(MExprPtr const& mexpr, bool& hasNext)
+{
+    auto [car, cdr] = deCons(mexpr);
+    
+    ExprPtr pred;
+    auto opStr = asString(car);
+    if (opStr && opStr.value() == "else")
     {
-        auto result = ExprPtr{new Variable(mLookAhead.text)};
-        consume();
-        return result;
+        pred = true_();
+        hasNext = false;
     }
-    ExprPtr atomic()
+    else
     {
-        if (mLookAhead.type != TokenType::kWORD)
-        {
-            throw std::runtime_error(mLookAhead.text);
-        }
-        auto c = mLookAhead.text.front();
-        if (isdigit(c) || (mLookAhead.text.size() > 1 && c == '-'))
-        {
-            return number();
-        }
-        if (c == '"')
-        {
-            return string();
-        }
-        return variable();
+        pred = parse(car);
     }
-    ExprPtr list()
+    auto action = parse(listBack(cdr));
+    return {pred, action};
+}
+
+inline ExprPtr cond(MExprPtr const& mexpr)
+{
+    std::vector<std::pair<ExprPtr, ExprPtr>> condClauses;
+    bool hasNext = true;
+    auto me = mexpr;
+    while (hasNext && me != MNil::instance())
     {
-        ASSERT(match(TokenType::kL_PAREN));
-        auto result = listContext();
-        ASSERT(result);
-        ASSERT(match(TokenType::kR_PAREN));
-        return result;
+        auto [car, cdr] = deCons(me);
+        condClauses.push_back(parseCondClauses(car, hasNext));
+        me = cdr;
     }
-    ExprPtr sexpr()
+    return ExprPtr{new Cond(condClauses)};
+}
+
+inline ExprPtr application(MExprPtr const& car, MExprPtr const& cdr)
+{
+    auto op = parse(car);
+    std::vector<ExprPtr> params = parseActions(cdr);
+    return ExprPtr{new Application(op, params)};
+}
+
+inline ExprPtr application(MExprPtr const& mexpr)
+{
+    auto [car, cdr] = deCons(mexpr);
+    return application(car, cdr);
+}
+
+inline auto tryMAtomic(MExprPtr const& mexpr) -> ExprPtr
+{
+    auto opStr = asString(mexpr);
+    if (!opStr.has_value())
     {
-        if (mLookAhead.type == TokenType::kL_PAREN)
-        {
-            return list();
-        }
-        return atomic();
-    }
-    ExprPtr listContext()
-    {
-        if (mLookAhead.type == TokenType::kWORD)
-        {
-            if (mLookAhead.text == "define")
-            {
-                return definition();
-            }
-            else if (mLookAhead.text == "set!")
-            {
-                return assignment();
-            }
-            else if (mLookAhead.text == "lambda")
-            {
-                return lambda();
-            }
-            else if (mLookAhead.text == "if")
-            {
-                return if_();
-            }
-            else if (mLookAhead.text == "cond")
-            {
-                return cond();
-            }
-            else if (mLookAhead.text == "and")
-            {
-                return and_();
-            }
-            else if (mLookAhead.text == "or")
-            {
-                return or_();
-            }
-            else if (mLookAhead.text == "begin")
-            {
-                consume();
-                return std::static_pointer_cast<Expr>(sequence());
-            }
-            else
-            {
-                return application();
-            }
-        }
-        if (mLookAhead.type == TokenType::kL_PAREN)
-        {
-            return application();
-        }
-        else
-        {
-            throw std::runtime_error("Not implemented: " + mLookAhead.text);
-        }
         return {};
     }
-    ExprPtr definition()
+    auto str = opStr.value();
+    auto c = str.front();
+    if (isdigit(c) || (str.size() > 1 && c == '-'))
     {
-        ASSERT(match({TokenType::kWORD, "define"}));
-        // define procedure
-        if (mLookAhead.type == TokenType::kL_PAREN)
-        {
-            consume();
-            auto var = variable();
-            auto params = parseParams();
-            ASSERT(match(TokenType::kR_PAREN));
-            auto body = sequence();
-            auto proc = ExprPtr{new Lambda(params, body)};
-            return ExprPtr{new Definition(var, proc)};
-        }
-        // normal definition
-        auto var = variable();
-        auto value = sexpr();
-        return ExprPtr{new Definition(var, value)};
+        double num = std::stod(str);
+        return ExprPtr{new Number(num)};
     }
-    ExprPtr assignment()
+    if (c == '"')
     {
-        ASSERT(match({TokenType::kWORD, "set!"}));
-        auto var = variable();
-        auto value = sexpr();
-        return ExprPtr{new Assignment(var, value)};
+        auto substr = str.substr(1U, str.size() - 2U);
+        return ExprPtr{new String(substr)};
     }
-    std::vector<ExprPtr> parseActions()
+    return ExprPtr{new Variable(str)};
+}
+
+inline auto tryMCons(MExprPtr const& mexpr) -> ExprPtr
+{
+    auto cons = dynamic_cast<MCons*>(mexpr.get());
+    if (!cons)
     {
-        std::vector<ExprPtr> actions;
-        while (mLookAhead.type != TokenType::kR_PAREN)
-        {
-            actions.push_back(sexpr());
-        }
-        return actions;
+        return {};
     }
-    std::shared_ptr<Sequence> sequence()
+    auto car = cons->car();
+    auto cdr = cons->cdr();
+    auto carStr = asString(car);
+    if (!carStr.has_value())
     {
-        return std::make_shared<Sequence>(parseActions());
+        // as MCons
+        return application(car, cdr);
     }
-    std::vector<std::string> parseParams()
+    if (carStr == "define")
     {
-        std::vector<std::string> params;
-        while (mLookAhead.type != TokenType::kR_PAREN)
-        {
-            params.push_back(dynamic_cast<Variable*>(variable().get())->name());
-        }
-        return params;
+        return definition(cdr);
     }
-    ExprPtr lambda()
+    else if (carStr == "set!")
     {
-        ASSERT(match({TokenType::kWORD, "lambda"}));
-        ASSERT(match(TokenType::kL_PAREN));
-        auto params = parseParams();
-        ASSERT(match(TokenType::kR_PAREN));
-        auto body = sequence();
-        return ExprPtr{new Lambda(params, body)};
+        return assignment(cdr);
     }
-    ExprPtr if_()
+    else if (carStr == "lambda")
     {
-        ASSERT(match({TokenType::kWORD, "if"}));
-        auto predicate = sexpr();
-        auto consequent = sexpr();
-        auto alternative = sexpr();
-        return ExprPtr{new If(predicate, consequent, alternative)};
+        return lambda(cdr);
     }
-    ExprPtr cond()
+    else if (carStr == "if")
     {
-        ASSERT(match({TokenType::kWORD, "cond"}));
-        std::vector<std::pair<ExprPtr, ExprPtr>> condClauses;
-        bool hasNext = true;
-        while (hasNext && mLookAhead.type != TokenType::kR_PAREN)
-        {
-            ASSERT(match(TokenType::kL_PAREN));
-            ExprPtr pred;
-            if (mLookAhead.text == "else")
-            {
-                pred = (consume(), true_());
-                hasNext = false;
-            }
-            else
-            {
-                pred = sexpr();
-            }
-            auto action = sexpr();
-            condClauses.emplace_back(pred, action);
-            ASSERT(match(TokenType::kR_PAREN));
-        }
-        return ExprPtr{new Cond(condClauses)};
+        return if_(cdr);
     }
-    ExprPtr and_()
+    else if (carStr == "cond")
     {
-        ASSERT(match({TokenType::kWORD, "and"}));
-        return ExprPtr{new And(parseActions())};
+        return cond(cdr);
     }
-    ExprPtr or_()
+    else if (carStr == "begin")
     {
-        ASSERT(match({TokenType::kWORD, "or"}));
-        return ExprPtr{new And(parseActions())};
+        return std::static_pointer_cast<Expr>(sequence(cdr));
     }
-    ExprPtr application()
+    else if (carStr == "and")
     {
-        auto op = sexpr();
-        std::vector<ExprPtr> params = parseActions();
-        return ExprPtr{new Application(op, params)};
+        return and_(cdr);
     }
-private:
-    Lexer mInput;
-    Token mLookAhead;
-};
+    else if (carStr == "or")
+    {
+        return or_(cdr);
+    }
+    return application(car, cdr);
+}
+
+inline auto parse(MExprPtr const& mexpr) -> ExprPtr
+{
+    if (auto e = tryMAtomic(mexpr))
+    {
+        return e;
+    }
+    if (auto e = tryMCons(mexpr))
+    {
+        return e;
+    }
+    FAIL("Not implemented!");
+    return {};
+}
 
 #endif // LISP_PARSER_H

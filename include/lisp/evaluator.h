@@ -1,22 +1,11 @@
 #ifndef LISP_EVALUATOR_H
 #define LISP_EVALUATOR_H
 
-#include <cstdlib>
-#include <memory>
-#include <sstream>
-#include <variant>
-#include <iostream>
-#include <numeric>
-#include <vector>
-#include <map>
-#include <algorithm>
-#include <functional>
-
-#define ASSERT(_) if (!(_)) { throw std::runtime_error{#_}; }
-#define FAIL(_) { throw std::runtime_error{#_}; }
+#include "lisp/meta.h"
 
 class Expr;
 using ExprPtr = std::shared_ptr<Expr>;
+class Env;
 
 class Variable;
 
@@ -228,38 +217,38 @@ public:
 
 class Assignment final : public Expr
 {
-    std::shared_ptr<Expr> mVariable;
+    std::string mVariableName;
     std::shared_ptr<Expr> mValue;
 public:
-    Assignment(std::shared_ptr<Expr> var, std::shared_ptr<Expr> value)
-    : mVariable{var}
+    Assignment(std::string const& varName, std::shared_ptr<Expr> value)
+    : mVariableName{varName}
     , mValue{value}
     {
     }
     ExprPtr eval(std::shared_ptr<Env> const& env) override
     {
-        return env->setVariableValue(dynamic_cast<Variable*>(mVariable.get())->name(), mValue->eval(env));
+        return env->setVariableValue(mVariableName, mValue->eval(env));
     }
     std::string toString() const override
     {
-        return "Assignment ( " + mVariable->toString() + " : " + mValue->toString() + " )";
+        return "Assignment ( " + mVariableName + " : " + mValue->toString() + " )";
     }
 };
 
 class Definition final : public Expr
 {
-    std::shared_ptr<Expr> mVariable;
+    std::string mVariableName;
     std::shared_ptr<Expr> mValue;
 public:
-    Definition(std::shared_ptr<Expr> var, std::shared_ptr<Expr> value)
-    : mVariable{var}
+    Definition(std::string const& varName, std::shared_ptr<Expr> value)
+    : mVariableName{varName}
     , mValue{value}
     {
     }
     ExprPtr eval(std::shared_ptr<Env> const& env) override;
     std::string toString() const override
     {
-        return "Definition ( " + mVariable->toString() + " : " + mValue->toString() + " )";
+        return "Definition ( " + mVariableName + " : " + mValue->toString() + " )";
     }
 };
 
@@ -344,7 +333,7 @@ public:
     }
     std::string toString() const override
     {
-        return "Any";
+        return "Or";
     }
 };
 
