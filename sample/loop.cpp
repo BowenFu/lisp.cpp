@@ -144,11 +144,8 @@ auto eval(std::string const& input, std::shared_ptr<Env> const& env)
     do
     {
         auto me = p.sexpr();
-        std::cout << "me\t<" << me->toString() << ">" << std::endl;
         auto e = parse(me);
-        std::cout << "e\t<" << e->toString() << ">" << std::endl;
         result = e->eval(env)->toString();
-        std::cout << "result\t<" << result << ">" << std::endl;
     } while (!p.eof());
     return result;
 }

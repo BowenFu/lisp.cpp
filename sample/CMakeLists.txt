@@ -74,7 +74,7 @@ do_test(test_string4
             )))))
 (member? \"abc\" (list 1 \"abc\"))
 "
-false)
+true)
 
 do_test(test_remember
 "
