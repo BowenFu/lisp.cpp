@@ -26,5 +26,5 @@ ExprPtr Lambda::eval(std::shared_ptr<Env> const& env)
 
 ExprPtr Definition::eval(std::shared_ptr<Env> const& env)
 {
-    return env->defineVariable(dynamic_cast<Variable*>(mVariable.get())->name(), mValue->eval(env));
+    return env->defineVariable(mVariableName, mValue->eval(env));
 }

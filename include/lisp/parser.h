@@ -161,7 +161,8 @@ public:
         if (mLookAhead.type == TokenType::kL_PAREN)
         {
             consume();
-            auto var = variable();
+            auto var = mLookAhead.text;
+            consume();
             auto params = parseParams();
             ASSERT(match(TokenType::kR_PAREN));
             auto body = sequence();
@@ -169,7 +170,8 @@ public:
             return ExprPtr{new Definition(var, proc)};
         }
         // normal definition
-        auto var = variable();
+        auto var = mLookAhead.text;
+        consume();
         auto value = sexpr();
         return ExprPtr{new Definition(var, value)};
     }
@@ -264,7 +266,134 @@ private:
     Token mLookAhead;
 };
 
-inline auto tryLiteral(MExprPtr const& mexpr) -> ExprPtr
+inline auto parse(MExprPtr const& mexpr) -> ExprPtr;
+
+inline auto deCons(MExprPtr const& mexpr)
+{
+    auto cons = dynamic_cast<MCons*>(mexpr.get());
+    ASSERT(cons);
+    return std::make_pair(cons->car(), cons->cdr());
+}
+
+inline std::optional<std::string> asString(MExprPtr const& mexpr)
+{
+    auto atomic = dynamic_cast<MAtomic*>(mexpr.get());
+    if (atomic)
+    {
+        return atomic->get();
+    }
+    return {};
+}
+
+ExprPtr definition(MExprPtr const& mexpr)
+{
+    auto [car, cdr] = deCons(mexpr);
+    // define procedure
+    // if (mLookAhead.type == TokenType::kL_PAREN)
+    // {
+    //     consume();
+    //     auto var = variable();
+    //     auto params = parseParams();
+    //     ASSERT(match(TokenType::kR_PAREN));
+    //     auto body = sequence();
+    //     auto proc = ExprPtr{new Lambda(params, body)};
+    //     return ExprPtr{new Definition(var, proc)};
+    // }
+    // normal definition
+    auto var = asString(car).value();
+    auto value = parse(cdr);
+    return ExprPtr{new Definition(var, value)};
+}
+
+#if 0
+ExprPtr assignment()
+{
+    auto var = variable();
+    auto value = sexpr();
+    return ExprPtr{new Assignment(var, value)};
+}
+std::vector<ExprPtr> parseActions()
+{
+    std::vector<ExprPtr> actions;
+    while (mLookAhead.type != TokenType::kR_PAREN)
+    {
+        actions.push_back(sexpr());
+    }
+    return actions;
+}
+std::shared_ptr<Sequence> sequence()
+{
+    return std::make_shared<Sequence>(parseActions());
+}
+std::vector<std::string> parseParams()
+{
+    std::vector<std::string> params;
+    while (mLookAhead.type != TokenType::kR_PAREN)
+    {
+        params.push_back(dynamic_cast<Variable*>(variable().get())->name());
+    }
+    return params;
+}
+ExprPtr lambda()
+{
+    ASSERT(match({TokenType::kWORD, "lambda"}));
+    ASSERT(match(TokenType::kL_PAREN));
+    auto params = parseParams();
+    ASSERT(match(TokenType::kR_PAREN));
+    auto body = sequence();
+    return ExprPtr{new Lambda(params, body)};
+}
+ExprPtr if_()
+{
+    ASSERT(match({TokenType::kWORD, "if"}));
+    auto predicate = sexpr();
+    auto consequent = sexpr();
+    auto alternative = sexpr();
+    return ExprPtr{new If(predicate, consequent, alternative)};
+}
+ExprPtr cond()
+{
+    ASSERT(match({TokenType::kWORD, "cond"}));
+    std::vector<std::pair<ExprPtr, ExprPtr>> condClauses;
+    bool hasNext = true;
+    while (hasNext && mLookAhead.type != TokenType::kR_PAREN)
+    {
+        ASSERT(match(TokenType::kL_PAREN));
+        ExprPtr pred;
+        if (mLookAhead.text == "else")
+        {
+            pred = (consume(), true_());
+            hasNext = false;
+        }
+        else
+        {
+            pred = sexpr();
+        }
+        auto action = sexpr();
+        condClauses.emplace_back(pred, action);
+        ASSERT(match(TokenType::kR_PAREN));
+    }
+    return ExprPtr{new Cond(condClauses)};
+}
+ExprPtr and_()
+{
+    ASSERT(match({TokenType::kWORD, "and"}));
+    return ExprPtr{new And(parseActions())};
+}
+ExprPtr or_()
+{
+    ASSERT(match({TokenType::kWORD, "or"}));
+    return ExprPtr{new And(parseActions())};
+}
+ExprPtr application()
+{
+    auto op = sexpr();
+    std::vector<ExprPtr> params = parseActions();
+    return ExprPtr{new Application(op, params)};
+}
+#endif
+
+inline auto tryMAtomic(MExprPtr const& mexpr) -> ExprPtr
 {
     auto str = dynamic_cast<MAtomic*>(mexpr.get())->get();
     auto c = str.front();
@@ -278,25 +407,62 @@ inline auto tryLiteral(MExprPtr const& mexpr) -> ExprPtr
         auto substr = str.substr(1U, str.size() - 2U);
         return ExprPtr{new String(substr)};
     }
-    return {};
-}
-
-inline auto tryVariable(MExprPtr const& mexpr) -> ExprPtr
-{
-    auto str = dynamic_cast<MAtomic*>(mexpr.get())->get();
     return ExprPtr{new Variable(str)};
 }
 
-inline auto eval(MExprPtr const& mexpr, std::shared_ptr<Env> const& env) -> ExprPtr
+inline auto tryMCons(MExprPtr const& mexpr) -> ExprPtr
 {
-    if (auto e = tryLiteral(mexpr))
+    auto cons = dynamic_cast<MCons*>(mexpr.get());
+    if (!cons)
     {
-        return e->eval(env);
+        return {};
     }
-    if (auto e = tryVariable(mexpr))
+    auto car = cons->car();
+    auto cdr = cons->cdr();
+    auto carStr = asString(car);
+    if (!carStr.has_value())
     {
-        return e->eval(env);
+        // as MCons
+        FAIL("Not implemeneted!");
     }
+    if (carStr == "define")
+    {
+        return definition(cdr);
+    }
+    // else if (carStr == "set!")
+    // {
+    //     return assignment(cdr);
+    // }
+    // else if (carStr == "lambda")
+    // {
+    //     return lambda(cdr);
+    // }
+    // else if (carStr == "if")
+    // {
+    //     return if_(cdr);
+    // }
+    // else if (carStr == "cond")
+    // {
+    //     return cond(cdr);
+    // }
+    // else if (carStr == "begin")
+    // {
+    //     return std::static_pointer_cast<Expr>(sequence(cdr));
+    // }
+    FAIL("Not implemented!");
+}
+
+inline auto parse(MExprPtr const& mexpr) -> ExprPtr
+{
+    if (auto e = tryMAtomic(mexpr))
+    {
+        return e;
+    }
+    if (auto e = tryMCons(mexpr))
+    {
+        return e;
+    }
+    FAIL("Not implemented!");
     return {};
 }
 

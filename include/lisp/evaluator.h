@@ -237,18 +237,18 @@ public:
 
 class Definition final : public Expr
 {
-    std::shared_ptr<Expr> mVariable;
+    std::string mVariableName;
     std::shared_ptr<Expr> mValue;
 public:
-    Definition(std::shared_ptr<Expr> var, std::shared_ptr<Expr> value)
-    : mVariable{var}
+    Definition(std::string const& varName, std::shared_ptr<Expr> value)
+    : mVariableName{varName}
     , mValue{value}
     {
     }
     ExprPtr eval(std::shared_ptr<Env> const& env) override;
     std::string toString() const override
     {
-        return "Definition ( " + mVariable->toString() + " : " + mValue->toString() + " )";
+        return "Definition ( " + mVariableName + " : " + mValue->toString() + " )";
     }
 };
 

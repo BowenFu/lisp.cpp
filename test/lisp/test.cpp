@@ -37,7 +37,7 @@ TEST(Parser, 1)
         );
         return std::shared_ptr<Expr>(new Number(result)); 
     };
-    auto defMul = Definition(ExprPtr{new Variable{"*"}}, ExprPtr{new PrimitiveProcedure{mul}});
+    auto defMul = Definition("*", ExprPtr{new PrimitiveProcedure{mul}});
     defMul.eval(env);
 
     for (auto s : expected)
@@ -69,7 +69,7 @@ TEST(Parser, 2)
         );
         return std::shared_ptr<Expr>(new Number(result)); 
     };
-    auto defMul = Definition(ExprPtr{new Variable{"*"}}, ExprPtr{new PrimitiveProcedure{mul}});
+    auto defMul = Definition("*", ExprPtr{new PrimitiveProcedure{mul}});
     defMul.eval(env);
 
     auto gt = [](std::vector<std::shared_ptr<Expr>> const& args)
@@ -79,7 +79,7 @@ TEST(Parser, 2)
         auto num2 = dynamic_cast<Number&>(*args.at(1));
         return std::shared_ptr<Expr>(new Bool(num1.get() > num2.get())); 
     };
-    auto defGT = Definition(ExprPtr{new Variable{">"}}, ExprPtr{new PrimitiveProcedure{gt}});
+    auto defGT = Definition(">", ExprPtr{new PrimitiveProcedure{gt}});
     defGT.eval(env);
 
     auto eq = [](std::vector<std::shared_ptr<Expr>> const& args)
@@ -89,7 +89,7 @@ TEST(Parser, 2)
         auto num2 = dynamic_cast<Number&>(*args.at(1));
         return std::shared_ptr<Expr>(new Bool(num1.get() == num2.get())); 
     };
-    auto defEQ = Definition(ExprPtr{new Variable{"="}}, ExprPtr{new PrimitiveProcedure{eq}});
+    auto defEQ = Definition("=", ExprPtr{new PrimitiveProcedure{eq}});
     defEQ.eval(env);
 
     auto sub = [](std::vector<std::shared_ptr<Expr>> const& args)
@@ -99,7 +99,7 @@ TEST(Parser, 2)
         auto num2 = dynamic_cast<Number&>(*args.at(1));
         return std::shared_ptr<Expr>(new Number(num1.get() - num2.get())); 
     };
-    auto defSub = Definition(ExprPtr{new Variable{"-"}}, ExprPtr{new PrimitiveProcedure{sub}});
+    auto defSub = Definition("-", ExprPtr{new PrimitiveProcedure{sub}});
     defSub.eval(env);
 
     for (auto s : expected)
@@ -130,7 +130,7 @@ TEST(Parser, begin)
         );
         return std::shared_ptr<Expr>(new Number(result)); 
     };
-    auto defMul = Definition(ExprPtr{new Variable{"*"}}, ExprPtr{new PrimitiveProcedure{mul}});
+    auto defMul = Definition("*", ExprPtr{new PrimitiveProcedure{mul}});
     defMul.eval(env);
 
     for (auto s : expected)
@@ -237,7 +237,7 @@ TEST(Parser, number)
     {
         auto e = p.sexpr();
         EXPECT_EQ(e->toString(), s.first);
-        EXPECT_EQ(eval(e, env)->toString(), s.second);
+        EXPECT_EQ(parse(e)->eval(env)->toString(), s.second);
     }
     EXPECT_TRUE(p.eof());
 }
@@ -254,7 +254,7 @@ TEST(Parser, string)
     {
         auto e = p.sexpr();
         EXPECT_EQ(e->toString(), s.first);
-        EXPECT_EQ(eval(e, env)->toString(), s.second);
+        EXPECT_EQ(parse(e)->eval(env)->toString(), s.second);
     }
     EXPECT_TRUE(p.eof());
 }
@@ -273,7 +273,7 @@ TEST(Parser, variable)
     {
         auto e = p.sexpr();
         EXPECT_EQ(e->toString(), s.first);
-        EXPECT_EQ(eval(e, env)->toString(), s.second);
+        EXPECT_EQ(parse(e)->eval(env)->toString(), s.second);
     }
     EXPECT_TRUE(p.eof());
 }
