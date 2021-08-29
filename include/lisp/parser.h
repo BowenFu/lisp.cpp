@@ -292,7 +292,7 @@ inline std::vector<std::string> parseParams(MExprPtr const& mexpr)
     auto me = mexpr;
     while (me != MNil::instance())
     {
-        auto [car, cdr] = deCons(mexpr);
+        auto [car, cdr] = deCons(me);
         auto opStr = asString(car);
         ASSERT(opStr.has_value());
         params.push_back(opStr.value());
@@ -308,41 +308,13 @@ inline MExprPtr listBack(MExprPtr const& mexpr)
     return car;
 }
 
-inline ExprPtr definition(MExprPtr const& mexpr)
-{
-    auto [car, cdr] = deCons(mexpr);
-    // define procedure
-    // if (mLookAhead.type == TokenType::kL_PAREN)
-    // {
-    //     consume();
-    //     auto var = variable();
-    //     auto params = parseParams();
-    //     ASSERT(match(TokenType::kR_PAREN));
-    //     auto body = sequence();
-    //     auto proc = ExprPtr{new Lambda(params, body)};
-    //     return ExprPtr{new Definition(var, proc)};
-    // }
-    // normal definition
-    auto var = asString(car).value();
-    auto value = parse(listBack(cdr));
-    return ExprPtr{new Definition(var, value)};
-}
-
-inline ExprPtr assignment(MExprPtr const& mexpr)
-{
-    auto [car, cdr] = deCons(mexpr);
-    auto var = asString(car).value();
-    auto value = parse(listBack(cdr));
-    return ExprPtr{new Assignment(var, value)};
-}
-
 inline std::vector<ExprPtr> parseActions(MExprPtr const& mexpr)
 {
     std::vector<ExprPtr> actions;
     auto me = mexpr;
     while (me != MNil::instance())
     {
-        auto [car, cdr] = deCons(mexpr);
+        auto [car, cdr] = deCons(me);
         actions.push_back(parse(car));
         me = cdr;
     }
@@ -352,6 +324,33 @@ inline std::vector<ExprPtr> parseActions(MExprPtr const& mexpr)
 inline std::shared_ptr<Sequence> sequence(MExprPtr const& mexpr)
 {
     return std::make_shared<Sequence>(parseActions(mexpr));
+}
+
+inline ExprPtr definition(MExprPtr const& mexpr)
+{
+    auto [car, cdr] = deCons(mexpr);
+    auto opStr = asString(car);
+    if (!opStr.has_value())
+    {
+        auto [carA, carD] = deCons(car);
+        auto opStr = asString(carA);
+        ASSERT(opStr.has_value());
+        auto params = parseParams(carD);
+        auto body = sequence(cdr);
+        auto proc = ExprPtr{new Lambda(params, body)};
+        return ExprPtr{new Definition(opStr.value(), proc)};
+    }
+    // normal definition
+    auto value = parse(listBack(cdr));
+    return ExprPtr{new Definition(opStr.value(), value)};
+}
+
+inline ExprPtr assignment(MExprPtr const& mexpr)
+{
+    auto [car, cdr] = deCons(mexpr);
+    auto var = asString(car).value();
+    auto value = parse(listBack(cdr));
+    return ExprPtr{new Assignment(var, value)};
 }
 
 inline ExprPtr lambda(MExprPtr const& mexpr)
@@ -475,10 +474,10 @@ inline auto tryMCons(MExprPtr const& mexpr) -> ExprPtr
     {
         return cond(cdr);
     }
-    // else if (carStr == "begin")
-    // {
-    //     return std::static_pointer_cast<Expr>(sequence(cdr));
-    // }
+    else if (carStr == "begin")
+    {
+        return std::static_pointer_cast<Expr>(sequence(cdr));
+    }
     return application(car, cdr);
 }
 

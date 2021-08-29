@@ -23,7 +23,7 @@ TEST(Parser, 1)
     std::initializer_list<std::pair<std::string, std::string>> expected = {{"Definition ( square : Lambda )", "CompoundProcedure (y, <procedure-env>)"}, {"Application (square)", "49"}};
 
     Lexer lex("(define square (lambda (y) (* y y))) (square 7)");
-    Parser p(lex);
+    MetaParser p(lex);
     
     auto env = std::make_shared<Env>();
 
@@ -42,7 +42,7 @@ TEST(Parser, 1)
 
     for (auto s : expected)
     {
-        auto e = p.sexpr();
+        auto e = parse(p.sexpr());
         EXPECT_EQ(e->toString(), s.first);
         EXPECT_EQ(e->eval(env)->toString(), s.second);
     }
@@ -51,11 +51,12 @@ TEST(Parser, 1)
 
 TEST(Parser, 2)
 {
-    std::initializer_list<std::pair<std::string, std::string> > expected =
-        {{"Definition ( factorial : Lambda )", "CompoundProcedure (y, <procedure-env>)"}, {"Application (factorial)", "120"}};
+    std::initializer_list<std::array<std::string, 3> > expected =
+        {{"(define factorial (lambda (y) (if (= y 0) 1 (* y (factorial (- y 1))))))", "Definition ( factorial : Lambda )", "CompoundProcedure (y, <procedure-env>)"},
+        {"(factorial 5)", "Application (factorial)", "120"}};
 
     Lexer lex("(define factorial (lambda (y) (if (= y 0) 1 (* y (factorial (- y 1)))))) (factorial 5)");
-    Parser p(lex);
+    MetaParser p(lex);
     
     auto env = std::make_shared<Env>();
 
@@ -104,9 +105,11 @@ TEST(Parser, 2)
 
     for (auto s : expected)
     {
-        auto e = p.sexpr();
-        EXPECT_EQ(e->toString(), s.first);
-        EXPECT_EQ(e->eval(env)->toString(), s.second);
+        auto me = p.sexpr();
+        EXPECT_EQ(me->toString(), s[0]);
+        auto e = parse(me);
+        EXPECT_EQ(e->toString(), s[1]);
+        EXPECT_EQ(e->eval(env)->toString(), s[2]);
     }
     EXPECT_TRUE(p.eof());
 }
@@ -116,7 +119,7 @@ TEST(Parser, begin)
     std::initializer_list<std::pair<std::string, std::string>> expected = {{"Definition ( square : Lambda )", "CompoundProcedure (y, <procedure-env>)"}, {"Application (square)", "49"}};
 
     Lexer lex("(define square (lambda (y) (* (begin 1 y) y))) (square 7)");
-    Parser p(lex);
+    MetaParser p(lex);
     
     auto env = std::make_shared<Env>();
 
@@ -135,7 +138,7 @@ TEST(Parser, begin)
 
     for (auto s : expected)
     {
-        auto e = p.sexpr();
+        auto e = parse(p.sexpr());
         EXPECT_EQ(e->toString(), s.first);
         EXPECT_EQ(e->eval(env)->toString(), s.second);
     }
@@ -147,13 +150,13 @@ TEST(Parser, Assignment)
     std::initializer_list<std::pair<std::string, std::string>> expected = {{"Definition ( x : 1 )", "1"}, {"Assignment ( x : 2 )", "2"}};
 
     Lexer lex("(define x 1) (set! x 2)");
-    Parser p(lex);
+    MetaParser p(lex);
     
     auto env = std::make_shared<Env>();
 
     for (auto s : expected)
     {
-        auto e = p.sexpr();
+        auto e = parse(p.sexpr());
         EXPECT_EQ(e->toString(), s.first);
         EXPECT_EQ(e->eval(env)->toString(), s.second);
     }
@@ -432,6 +435,26 @@ TEST(Parser, Application2)
     
     auto env = std::make_shared<Env>();
     env->defineVariable("#t", true_());
+
+    for (auto s : expected)
+    {
+        auto me = p.sexpr();
+        EXPECT_EQ(me->toString(), s[0]);
+        auto e = parse(me);
+        EXPECT_EQ(e->toString(), s[1]);
+        EXPECT_EQ(e->eval(env)->toString(), s[2]);
+    }
+    EXPECT_TRUE(p.eof());
+}
+
+TEST(Parser, begin2)
+{
+    std::initializer_list<std::array<std::string, 3> > expected = {{"(begin 1 2)", "Sequence", "2"}};
+
+    Lexer lex("(begin 1 2)");
+    MetaParser p(lex);
+    
+    auto env = std::make_shared<Env>();
 
     for (auto s : expected)
     {
