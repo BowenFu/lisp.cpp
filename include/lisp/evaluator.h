@@ -333,7 +333,7 @@ public:
     }
     std::string toString() const override
     {
-        return "Any";
+        return "Or";
     }
 };
 

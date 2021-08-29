@@ -38,13 +38,7 @@ do_test(test_cond2 "(define x #f) (cond (x 1) (else 2))" 2)
 
 do_test(test_cond3
 "
-(define lat?
-    (lambda (l)
-        (cond
-            ((null? l) #t)
-            ((atom? (car l)) (lat? (cdr l)))
-            (else #f))))
-(lat? (list 1 2 (list 3)))
+(define lat?  (lambda (l) (cond ((null? l) #t) ((atom? (car l)) (lat? (cdr l))) (else #f)))) (lat? (list 1 2 (list 3)))
 "
 false)
 
