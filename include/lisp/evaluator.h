@@ -217,21 +217,21 @@ public:
 
 class Assignment final : public Expr
 {
-    std::shared_ptr<Expr> mVariable;
+    std::string mVariableName;
     std::shared_ptr<Expr> mValue;
 public:
-    Assignment(std::shared_ptr<Expr> var, std::shared_ptr<Expr> value)
-    : mVariable{var}
+    Assignment(std::string const& varName, std::shared_ptr<Expr> value)
+    : mVariableName{varName}
     , mValue{value}
     {
     }
     ExprPtr eval(std::shared_ptr<Env> const& env) override
     {
-        return env->setVariableValue(dynamic_cast<Variable*>(mVariable.get())->name(), mValue->eval(env));
+        return env->setVariableValue(mVariableName, mValue->eval(env));
     }
     std::string toString() const override
     {
-        return "Assignment ( " + mVariable->toString() + " : " + mValue->toString() + " )";
+        return "Assignment ( " + mVariableName + " : " + mValue->toString() + " )";
     }
 };
 

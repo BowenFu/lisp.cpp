@@ -178,7 +178,8 @@ public:
     ExprPtr assignment()
     {
         ASSERT(match({TokenType::kWORD, "set!"}));
-        auto var = variable();
+        auto var = mLookAhead.text;
+        consume();
         auto value = sexpr();
         return ExprPtr{new Assignment(var, value)};
     }
@@ -307,13 +308,17 @@ ExprPtr definition(MExprPtr const& mexpr)
     return ExprPtr{new Definition(var, value)};
 }
 
-#if 0
-ExprPtr assignment()
+ExprPtr assignment(MExprPtr const& mexpr)
 {
-    auto var = variable();
-    auto value = sexpr();
+    auto [car, cdr] = deCons(mexpr);
+    auto var = asString(car).value();
+    auto [cdrA, cdrD] = deCons(cdr);
+    ASSERT(cdrD == MNil::instance());
+    auto value = parse(cdrA);
     return ExprPtr{new Assignment(var, value)};
 }
+
+#if 0
 std::vector<ExprPtr> parseActions()
 {
     std::vector<ExprPtr> actions;
@@ -436,10 +441,10 @@ inline auto tryMCons(MExprPtr const& mexpr) -> ExprPtr
     {
         return definition(cdr);
     }
-    // else if (carStr == "set!")
-    // {
-    //     return assignment(cdr);
-    // }
+    else if (carStr == "set!")
+    {
+        return assignment(cdr);
+    }
     // else if (carStr == "lambda")
     // {
     //     return lambda(cdr);

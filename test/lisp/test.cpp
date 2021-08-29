@@ -278,11 +278,31 @@ TEST(Parser, variable)
     EXPECT_TRUE(p.eof());
 }
 
-TEST(Parser, definition)
+TEST(Parser, Definition)
 {
     std::initializer_list<std::array<std::string, 3>> expected = {{"(define x 1)", "Definition ( x : 1 )", "1"}, {"x", "x", "1"}};
 
     Lexer lex("(define x 1) x");
+    MetaParser p(lex);
+    
+    auto env = std::make_shared<Env>();
+
+    for (auto s : expected)
+    {
+        auto me = p.sexpr();
+        EXPECT_EQ(me->toString(), s[0]);
+        auto e = parse(me);
+        EXPECT_EQ(e->toString(), s[1]);
+        EXPECT_EQ(e->eval(env)->toString(), s[2]);
+    }
+    EXPECT_TRUE(p.eof());
+}
+
+TEST(Parser, Assignment2)
+{
+    std::initializer_list<std::array<std::string, 3>> expected = {{"(define x 1)", "Definition ( x : 1 )", "1"}, {"(set! x 2)", "Assignment ( x : 2 )", "2"}};
+
+    Lexer lex("(define x 1) (set! x 2)");
     MetaParser p(lex);
     
     auto env = std::make_shared<Env>();
