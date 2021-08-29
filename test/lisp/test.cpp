@@ -357,6 +357,25 @@ TEST(Parser, Lambda2)
     EXPECT_TRUE(p.eof());
 }
 
+TEST(Parser, Variadic)
+{
+    std::initializer_list<std::pair<std::string, std::string> > expected = {{"Definition ( to-list : Lambda )", "CompoundProcedure (. y, <procedure-env>)"}, {"Application (to-list)", "Cons (1, nil)"}};
+
+    Lexer lex("(define (to-list . y) y) (to-list 1)");
+    MetaParser p(lex);
+    
+    auto env = std::make_shared<Env>();
+
+    for (auto s : expected)
+    {
+        auto me = p.sexpr();
+        auto e = parse(me);
+        EXPECT_EQ(e->toString(), s.first);
+        EXPECT_EQ(e->eval(env)->toString(), s.second);
+    }
+    EXPECT_TRUE(p.eof());
+}
+
 TEST(Parser, if)
 {
     std::initializer_list<std::pair<std::string, std::string> > expected = {{"(if #t 1 2)", "1"}};

@@ -19,6 +19,16 @@ inline auto deCons(MExprPtr const& mexpr)
     return std::make_pair(cons->car(), cons->cdr());
 }
 
+inline auto tryDeCons(MExprPtr const& mexpr) -> std::optional<std::pair<MExprPtr, MExprPtr>>
+{
+    auto cons = dynamic_cast<MCons*>(mexpr.get());
+    if (cons)
+    {
+        return std::make_optional(std::make_pair(cons->car(), cons->cdr()));
+    }
+    return {};
+}
+
 inline std::optional<std::string> asString(MExprPtr const& mexpr)
 {
     auto atomic = dynamic_cast<MAtomic*>(mexpr.get());
@@ -29,19 +39,27 @@ inline std::optional<std::string> asString(MExprPtr const& mexpr)
     return {};
 }
 
-inline std::vector<std::string> parseParams(MExprPtr const& mexpr)
+// bool : variadic
+inline std::pair<std::vector<std::string>, bool> parseParams(MExprPtr const& mexpr)
 {
     std::vector<std::string> params;
     auto me = mexpr;
     while (me != MNil::instance())
     {
-        auto [car, cdr] = deCons(me);
-        auto opStr = asString(car);
+        auto cons = dynamic_cast<MCons*>(me.get());
+        if (!cons)
+        {
+            auto opStr = asString(me);
+            ASSERT(opStr.has_value());
+            params.push_back(opStr.value());
+            return {params, true};
+        }
+        auto opStr = asString(cons->car());
         ASSERT(opStr.has_value());
         params.push_back(opStr.value());
-        me = cdr;
+        me = cons->cdr();
     }
-    return params;
+    return {params, false};
 }
 
 inline MExprPtr listBack(MExprPtr const& mexpr)
@@ -90,7 +108,7 @@ inline ExprPtr definition(MExprPtr const& mexpr)
         ASSERT(opStr.has_value());
         auto params = parseParams(carD);
         auto body = sequence(cdr);
-        auto proc = ExprPtr{new Lambda(params, body)};
+        auto proc = ExprPtr{new Lambda(params.first, params.second, body)};
         return ExprPtr{new Definition(opStr.value(), proc)};
     }
     // normal definition
@@ -111,7 +129,7 @@ inline ExprPtr lambda(MExprPtr const& mexpr)
     auto [car, cdr] = deCons(mexpr);
     auto params = parseParams(car);
     auto body = sequence(cdr);
-    return ExprPtr{new Lambda(params, body)};
+    return ExprPtr{new Lambda(params.first, params.second, body)};
 }
 
 inline ExprPtr if_(MExprPtr const& mexpr)

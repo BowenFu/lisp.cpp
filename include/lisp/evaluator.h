@@ -369,13 +369,13 @@ public:
 class Lambda final : public Expr
 {
     std::vector<std::string> mParameters;
-    std::shared_ptr<Sequence> mBody;
     bool mVariadic;
+    std::shared_ptr<Sequence> mBody;
 public:
-    Lambda(std::vector<std::string> const& params, std::shared_ptr<Sequence> body, bool variadic = false)
+    Lambda(std::vector<std::string> const& params, bool variadic, std::shared_ptr<Sequence> body)
     : mParameters{params}
-    , mBody{body}
     , mVariadic{variadic}
+    , mBody{body}
     {
     }
     ExprPtr eval(std::shared_ptr<Env> const& env) override;
