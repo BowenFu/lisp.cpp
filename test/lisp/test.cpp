@@ -421,3 +421,25 @@ TEST(Parser, Application)
     }
     EXPECT_TRUE(p.eof());
 }
+
+TEST(Parser, Application2)
+{
+    std::initializer_list<std::array<std::string, 3> > expected = {{"(define i (lambda (x) x))", "Definition ( i : Lambda )", "CompoundProcedure (x, <procedure-env>)"},
+                                                                   {"(i \".\")", "Application (i)", "."}};
+
+    Lexer lex("(define i (lambda (x) x)) (i \".\")");
+    MetaParser p(lex);
+    
+    auto env = std::make_shared<Env>();
+    env->defineVariable("#t", true_());
+
+    for (auto s : expected)
+    {
+        auto me = p.sexpr();
+        EXPECT_EQ(me->toString(), s[0]);
+        auto e = parse(me);
+        EXPECT_EQ(e->toString(), s[1]);
+        EXPECT_EQ(e->eval(env)->toString(), s[2]);
+    }
+    EXPECT_TRUE(p.eof());
+}
