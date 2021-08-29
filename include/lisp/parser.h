@@ -301,7 +301,9 @@ ExprPtr definition(MExprPtr const& mexpr)
     // }
     // normal definition
     auto var = asString(car).value();
-    auto value = parse(cdr);
+    auto [cdrA, cdrD] = deCons(cdr);
+    ASSERT(cdrD == MNil::instance());
+    auto value = parse(cdrA);
     return ExprPtr{new Definition(var, value)};
 }
 
@@ -395,7 +397,12 @@ ExprPtr application()
 
 inline auto tryMAtomic(MExprPtr const& mexpr) -> ExprPtr
 {
-    auto str = dynamic_cast<MAtomic*>(mexpr.get())->get();
+    auto opStr = asString(mexpr);
+    if (!opStr.has_value())
+    {
+        return {};
+    }
+    auto str = opStr.value();
     auto c = str.front();
     if (isdigit(c) || (str.size() > 1 && c == '-'))
     {
