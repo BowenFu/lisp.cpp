@@ -372,31 +372,40 @@ inline ExprPtr if_(MExprPtr const& mexpr)
     return ExprPtr{new If(predicate, consequent, alternative)};
 }
 
-#if 0
-ExprPtr cond()
+inline std::pair<ExprPtr, ExprPtr> parseCondClauses(MExprPtr const& mexpr, bool& hasNext)
 {
-    ASSERT(match({TokenType::kWORD, "cond"}));
+    auto [car, cdr] = deCons(mexpr);
+    
+    ExprPtr pred;
+    auto opStr = asString(car);
+    if (opStr && opStr.value() == "else")
+    {
+        pred = true_();
+        hasNext = false;
+    }
+    else
+    {
+        pred = parse(car);
+    }
+    auto action = parse(listBack(cdr));
+    return {pred, action};
+}
+
+inline ExprPtr cond(MExprPtr const& mexpr)
+{
     std::vector<std::pair<ExprPtr, ExprPtr>> condClauses;
     bool hasNext = true;
-    while (hasNext && mLookAhead.type != TokenType::kR_PAREN)
+    auto me = mexpr;
+    while (hasNext && me != MNil::instance())
     {
-        ASSERT(match(TokenType::kL_PAREN));
-        ExprPtr pred;
-        if (mLookAhead.text == "else")
-        {
-            pred = (consume(), true_());
-            hasNext = false;
-        }
-        else
-        {
-            pred = sexpr();
-        }
-        auto action = sexpr();
-        condClauses.emplace_back(pred, action);
-        ASSERT(match(TokenType::kR_PAREN));
+        auto [car, cdr] = deCons(me);
+        condClauses.push_back(parseCondClauses(car, hasNext));
+        me = cdr;
     }
     return ExprPtr{new Cond(condClauses)};
 }
+
+#if 0
 ExprPtr and_()
 {
     ASSERT(match({TokenType::kWORD, "and"}));
@@ -468,10 +477,10 @@ inline auto tryMCons(MExprPtr const& mexpr) -> ExprPtr
     {
         return if_(cdr);
     }
-    // else if (carStr == "cond")
-    // {
-    //     return cond(cdr);
-    // }
+    else if (carStr == "cond")
+    {
+        return cond(cdr);
+    }
     // else if (carStr == "begin")
     // {
     //     return std::static_pointer_cast<Expr>(sequence(cdr));

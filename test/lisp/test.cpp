@@ -379,3 +379,24 @@ TEST(Parser, if)
     }
     EXPECT_TRUE(p.eof());
 }
+
+TEST(Parser, cond)
+{
+    std::initializer_list<std::array<std::string, 3> > expected = {{"(cond (#t 1) (else 2))", "Cond", "1"}};
+
+    Lexer lex("(cond (#t 1) (else 2))");
+    MetaParser p(lex);
+    
+    auto env = std::make_shared<Env>();
+    env->defineVariable("#t", true_());
+
+    for (auto s : expected)
+    {
+        auto me = p.sexpr();
+        EXPECT_EQ(me->toString(), s[0]);
+        auto e = parse(me);
+        EXPECT_EQ(e->toString(), s[1]);
+        EXPECT_EQ(e->eval(env)->toString(), s[2]);
+    }
+    EXPECT_TRUE(p.eof());
+}
