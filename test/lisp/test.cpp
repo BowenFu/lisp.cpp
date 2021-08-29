@@ -51,9 +51,9 @@ TEST(Parser, 1)
 
 TEST(Parser, 2)
 {
-    std::initializer_list<std::array<std::string, 3> > expected =
-        {{"(define factorial (lambda (y) (if (= y 0) 1 (* y (factorial (- y 1))))))", "Definition ( factorial : Lambda )", "CompoundProcedure (y, <procedure-env>)"},
-        {"(factorial 5)", "Application (factorial)", "120"}};
+    std::initializer_list<std::pair<std::string, std::string> > expected =
+        {{"Definition ( factorial : Lambda )", "CompoundProcedure (y, <procedure-env>)"},
+        {"Application (factorial)", "120"}};
 
     Lexer lex("(define factorial (lambda (y) (if (= y 0) 1 (* y (factorial (- y 1)))))) (factorial 5)");
     MetaParser p(lex);
@@ -106,10 +106,9 @@ TEST(Parser, 2)
     for (auto s : expected)
     {
         auto me = p.sexpr();
-        EXPECT_EQ(me->toString(), s[0]);
         auto e = parse(me);
-        EXPECT_EQ(e->toString(), s[1]);
-        EXPECT_EQ(e->eval(env)->toString(), s[2]);
+        EXPECT_EQ(e->toString(), s.first);
+        EXPECT_EQ(e->eval(env)->toString(), s.second);
     }
     EXPECT_TRUE(p.eof());
 }
@@ -283,7 +282,7 @@ TEST(Parser, variable)
 
 TEST(Parser, Definition)
 {
-    std::initializer_list<std::array<std::string, 3> > expected = {{"(define x 1)", "Definition ( x : 1 )", "1"}, {"x", "x", "1"}};
+    std::initializer_list<std::pair<std::string, std::string> > expected = {{"Definition ( x : 1 )", "1"}, {"x", "1"}};
 
     Lexer lex("(define x 1) x");
     MetaParser p(lex);
@@ -293,18 +292,17 @@ TEST(Parser, Definition)
     for (auto s : expected)
     {
         auto me = p.sexpr();
-        EXPECT_EQ(me->toString(), s[0]);
         auto e = parse(me);
-        EXPECT_EQ(e->toString(), s[1]);
-        EXPECT_EQ(e->eval(env)->toString(), s[2]);
+        EXPECT_EQ(e->toString(), s.first);
+        EXPECT_EQ(e->eval(env)->toString(), s.second);
     }
     EXPECT_TRUE(p.eof());
 }
 
 TEST(Parser, Assignment2)
 {
-    std::initializer_list<std::array<std::string, 3> > expected = {{"(define x 1)", "Definition ( x : 1 )", "1"},
-                                                                   {"(set! x 2)", "Assignment ( x : 2 )", "2"}};
+    std::initializer_list<std::pair<std::string, std::string> > expected = {{"Definition ( x : 1 )", "1"},
+                                                                   {"Assignment ( x : 2 )", "2"}};
 
     Lexer lex("(define x 1) (set! x 2)");
     MetaParser p(lex);
@@ -314,17 +312,16 @@ TEST(Parser, Assignment2)
     for (auto s : expected)
     {
         auto me = p.sexpr();
-        EXPECT_EQ(me->toString(), s[0]);
         auto e = parse(me);
-        EXPECT_EQ(e->toString(), s[1]);
-        EXPECT_EQ(e->eval(env)->toString(), s[2]);
+        EXPECT_EQ(e->toString(), s.first);
+        EXPECT_EQ(e->eval(env)->toString(), s.second);
     }
     EXPECT_TRUE(p.eof());
 }
 
 TEST(Parser, Lambda)
 {
-    std::initializer_list<std::array<std::string, 3> > expected = {{"(lambda () 1)", "Lambda", "CompoundProcedure (<procedure-env>)"}};
+    std::initializer_list<std::pair<std::string, std::string> > expected = {{"Lambda", "CompoundProcedure (<procedure-env>)"}};
 
     Lexer lex("(lambda () 1)");
     MetaParser p(lex);
@@ -334,17 +331,16 @@ TEST(Parser, Lambda)
     for (auto s : expected)
     {
         auto me = p.sexpr();
-        EXPECT_EQ(me->toString(), s[0]);
         auto e = parse(me);
-        EXPECT_EQ(e->toString(), s[1]);
-        EXPECT_EQ(e->eval(env)->toString(), s[2]);
+        EXPECT_EQ(e->toString(), s.first);
+        EXPECT_EQ(e->eval(env)->toString(), s.second);
     }
     EXPECT_TRUE(p.eof());
 }
 
 TEST(Parser, Lambda2)
 {
-    std::initializer_list<std::array<std::string, 3> > expected = {{"(lambda (x) x)", "Lambda", "CompoundProcedure (x, <procedure-env>)"}};
+    std::initializer_list<std::pair<std::string, std::string> > expected = {{"Lambda", "CompoundProcedure (x, <procedure-env>)"}};
 
     Lexer lex("(lambda (x) x)");
     MetaParser p(lex);
@@ -354,17 +350,16 @@ TEST(Parser, Lambda2)
     for (auto s : expected)
     {
         auto me = p.sexpr();
-        EXPECT_EQ(me->toString(), s[0]);
         auto e = parse(me);
-        EXPECT_EQ(e->toString(), s[1]);
-        EXPECT_EQ(e->eval(env)->toString(), s[2]);
+        EXPECT_EQ(e->toString(), s.first);
+        EXPECT_EQ(e->eval(env)->toString(), s.second);
     }
     EXPECT_TRUE(p.eof());
 }
 
 TEST(Parser, if)
 {
-    std::initializer_list<std::array<std::string, 3> > expected = {{"(if #t 1 2)", "(if #t 1 2)", "1"}};
+    std::initializer_list<std::pair<std::string, std::string> > expected = {{"(if #t 1 2)", "1"}};
 
     Lexer lex("(if #t 1 2)");
     MetaParser p(lex);
@@ -375,17 +370,16 @@ TEST(Parser, if)
     for (auto s : expected)
     {
         auto me = p.sexpr();
-        EXPECT_EQ(me->toString(), s[0]);
         auto e = parse(me);
-        EXPECT_EQ(e->toString(), s[1]);
-        EXPECT_EQ(e->eval(env)->toString(), s[2]);
+        EXPECT_EQ(e->toString(), s.first);
+        EXPECT_EQ(e->eval(env)->toString(), s.second);
     }
     EXPECT_TRUE(p.eof());
 }
 
 TEST(Parser, cond)
 {
-    std::initializer_list<std::array<std::string, 3> > expected = {{"(cond (#t 1) (else 2))", "Cond", "1"}};
+    std::initializer_list<std::pair<std::string, std::string> > expected = {{"Cond", "1"}};
 
     Lexer lex("(cond (#t 1) (else 2))");
     MetaParser p(lex);
@@ -396,17 +390,16 @@ TEST(Parser, cond)
     for (auto s : expected)
     {
         auto me = p.sexpr();
-        EXPECT_EQ(me->toString(), s[0]);
         auto e = parse(me);
-        EXPECT_EQ(e->toString(), s[1]);
-        EXPECT_EQ(e->eval(env)->toString(), s[2]);
+        EXPECT_EQ(e->toString(), s.first);
+        EXPECT_EQ(e->eval(env)->toString(), s.second);
     }
     EXPECT_TRUE(p.eof());
 }
 
 TEST(Parser, Application)
 {
-    std::initializer_list<std::array<std::string, 3> > expected = {{"((lambda () 1))", "Application (Lambda)", "1"}};
+    std::initializer_list<std::pair<std::string, std::string> > expected = {{"Application (Lambda)", "1"}};
 
     Lexer lex("((lambda () 1))");
     MetaParser p(lex);
@@ -417,18 +410,17 @@ TEST(Parser, Application)
     for (auto s : expected)
     {
         auto me = p.sexpr();
-        EXPECT_EQ(me->toString(), s[0]);
         auto e = parse(me);
-        EXPECT_EQ(e->toString(), s[1]);
-        EXPECT_EQ(e->eval(env)->toString(), s[2]);
+        EXPECT_EQ(e->toString(), s.first);
+        EXPECT_EQ(e->eval(env)->toString(), s.second);
     }
     EXPECT_TRUE(p.eof());
 }
 
 TEST(Parser, Application2)
 {
-    std::initializer_list<std::array<std::string, 3> > expected = {{"(define i (lambda (x) x))", "Definition ( i : Lambda )", "CompoundProcedure (x, <procedure-env>)"},
-                                                                   {"(i \".\")", "Application (i)", "."}};
+    std::initializer_list<std::pair<std::string, std::string> > expected = {{"Definition ( i : Lambda )", "CompoundProcedure (x, <procedure-env>)"},
+                                                                   {"Application (i)", "."}};
 
     Lexer lex("(define i (lambda (x) x)) (i \".\")");
     MetaParser p(lex);
@@ -439,17 +431,16 @@ TEST(Parser, Application2)
     for (auto s : expected)
     {
         auto me = p.sexpr();
-        EXPECT_EQ(me->toString(), s[0]);
         auto e = parse(me);
-        EXPECT_EQ(e->toString(), s[1]);
-        EXPECT_EQ(e->eval(env)->toString(), s[2]);
+        EXPECT_EQ(e->toString(), s.first);
+        EXPECT_EQ(e->eval(env)->toString(), s.second);
     }
     EXPECT_TRUE(p.eof());
 }
 
 TEST(Parser, begin2)
 {
-    std::initializer_list<std::array<std::string, 3> > expected = {{"(begin 1 2)", "Sequence", "2"}};
+    std::initializer_list<std::pair<std::string, std::string> > expected = {{"Sequence", "2"}};
 
     Lexer lex("(begin 1 2)");
     MetaParser p(lex);
@@ -459,17 +450,16 @@ TEST(Parser, begin2)
     for (auto s : expected)
     {
         auto me = p.sexpr();
-        EXPECT_EQ(me->toString(), s[0]);
         auto e = parse(me);
-        EXPECT_EQ(e->toString(), s[1]);
-        EXPECT_EQ(e->eval(env)->toString(), s[2]);
+        EXPECT_EQ(e->toString(), s.first);
+        EXPECT_EQ(e->eval(env)->toString(), s.second);
     }
     EXPECT_TRUE(p.eof());
 }
 
 TEST(Parser, andor)
 {
-    std::initializer_list<std::array<std::string, 3> > expected = {{"(or 1 2 (and 3) #t)", "Or", "true"}};
+    std::initializer_list<std::pair<std::string, std::string> > expected = {{"Or", "true"}};
 
     Lexer lex("(or 1 2 (and 3) #t)");
     MetaParser p(lex);
@@ -480,10 +470,9 @@ TEST(Parser, andor)
     for (auto s : expected)
     {
         auto me = p.sexpr();
-        EXPECT_EQ(me->toString(), s[0]);
         auto e = parse(me);
-        EXPECT_EQ(e->toString(), s[1]);
-        EXPECT_EQ(e->eval(env)->toString(), s[2]);
+        EXPECT_EQ(e->toString(), s.first);
+        EXPECT_EQ(e->eval(env)->toString(), s.second);
     }
     EXPECT_TRUE(p.eof());
 }

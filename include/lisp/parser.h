@@ -8,6 +8,7 @@
 #include "lisp/lexer.h"
 #include "lisp/metaParser.h"
 #include <cctype>
+#include <optional>
 
 inline auto parse(MExprPtr const& mexpr) -> ExprPtr;
 

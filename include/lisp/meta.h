@@ -74,7 +74,7 @@ public:
     {
         std::ostringstream o;
         o << "(" << mCar->toString();
-        if (auto cdr = dynamic_cast<MCons*>(mCdr.get()))
+        if (dynamic_cast<MCons*>(mCdr.get()))
         {
             auto cdrStr = mCdr->toString();
             auto cdrStrSize = cdrStr.size();
