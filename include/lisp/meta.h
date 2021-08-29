@@ -80,7 +80,7 @@ public:
             auto cdrStrSize = cdrStr.size();
             o << " " << cdrStr.substr(1U, cdrStrSize - 2);
         }
-        else if (auto cdr = dynamic_cast<MNil*>(mCdr.get()))
+        else if (dynamic_cast<MNil*>(mCdr.get()))
         {
         }
         else
