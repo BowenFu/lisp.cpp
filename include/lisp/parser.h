@@ -156,14 +156,14 @@ inline ExprPtr cond(MExprPtr const& mexpr)
     return ExprPtr{new Cond(condClauses)};
 }
 
-ExprPtr application(MExprPtr const& car, MExprPtr const& cdr)
+inline ExprPtr application(MExprPtr const& car, MExprPtr const& cdr)
 {
     auto op = parse(car);
     std::vector<ExprPtr> params = parseActions(cdr);
     return ExprPtr{new Application(op, params)};
 }
 
-ExprPtr application(MExprPtr const& mexpr)
+inline ExprPtr application(MExprPtr const& mexpr)
 {
     auto [car, cdr] = deCons(mexpr);
     return application(car, cdr);
