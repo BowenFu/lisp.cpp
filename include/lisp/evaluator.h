@@ -25,7 +25,7 @@ public:
     : mFrame{frame}
     , mEnclosingEnvironment{enclosingEnvironment}
     {}
-    ~Env()
+    void clear()
     {
         mFrame.clear();
         mEnclosingEnvironment = nullptr;
