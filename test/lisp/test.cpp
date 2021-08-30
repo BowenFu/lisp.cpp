@@ -47,6 +47,8 @@ TEST(Parser, 1)
         EXPECT_EQ(e->eval(env)->toString(), s.second);
     }
     EXPECT_TRUE(p.eof());
+
+    env->clear();
 }
 
 TEST(Parser, 2)
@@ -111,6 +113,8 @@ TEST(Parser, 2)
         EXPECT_EQ(e->eval(env)->toString(), s.second);
     }
     EXPECT_TRUE(p.eof());
+
+    env->clear();
 }
 
 TEST(Parser, begin)
@@ -142,6 +146,8 @@ TEST(Parser, begin)
         EXPECT_EQ(e->eval(env)->toString(), s.second);
     }
     EXPECT_TRUE(p.eof());
+
+    env->clear();
 }
 
 TEST(Parser, Assignment)
@@ -376,6 +382,8 @@ TEST(Parser, Variadic)
         EXPECT_EQ(e->eval(env)->toString(), s.second);
     }
     EXPECT_TRUE(p.eof());
+
+    env->clear();
 }
 
 TEST(Parser, Variadic2)
@@ -397,6 +405,8 @@ TEST(Parser, Variadic2)
         EXPECT_EQ(e->eval(env)->toString(), s.second);
     }
     EXPECT_TRUE(p.eof());
+
+    env->clear();
 }
 
 
@@ -479,6 +489,8 @@ TEST(Parser, Application2)
         EXPECT_EQ(e->eval(env)->toString(), s.second);
     }
     EXPECT_TRUE(p.eof());
+
+    env->clear();
 }
 
 TEST(Parser, begin2)
