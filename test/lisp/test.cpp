@@ -468,8 +468,6 @@ TEST(Parser, Application)
         EXPECT_EQ(e->eval(env)->toString(), s.second);
     }
     EXPECT_TRUE(p.eof());
-
-    env->clear();
 }
 
 TEST(Parser, Application2)
@@ -491,6 +489,8 @@ TEST(Parser, Application2)
         EXPECT_EQ(e->eval(env)->toString(), s.second);
     }
     EXPECT_TRUE(p.eof());
+
+    env->clear();
 }
 
 TEST(Parser, begin2)
