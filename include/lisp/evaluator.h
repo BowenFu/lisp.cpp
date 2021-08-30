@@ -25,6 +25,11 @@ public:
     : mFrame{frame}
     , mEnclosingEnvironment{enclosingEnvironment}
     {}
+    ~Env()
+    {
+        mFrame.clear();
+        mEnclosingEnvironment = nullptr;
+    }
     ExprPtr lookupVariableValue(std::string const& variableName)
     {
         Env* env = this;
@@ -467,7 +472,7 @@ class CompoundProcedure : public Procedure
     std::shared_ptr<Sequence> mBody;
     std::vector<std::string> mParameters;
     bool mVariadic;
-    std::weak_ptr<Env> mEnvironment;
+    std::shared_ptr<Env> mEnvironment;
 public:
     CompoundProcedure(std::shared_ptr<Sequence> body, std::vector<std::string> parameters, bool variadic, std::shared_ptr<Env> const& environment)
     : mBody{body}
@@ -477,11 +482,11 @@ public:
     {}
     ExprPtr eval(std::shared_ptr<Env> const& /* env */) override
     {
-        return ExprPtr{new CompoundProcedure{mBody, mParameters, mVariadic, std::shared_ptr<Env>{mEnvironment}}};
+        return ExprPtr{new CompoundProcedure{mBody, mParameters, mVariadic, mEnvironment}};
     }
     std::shared_ptr<Expr> apply(std::vector<std::shared_ptr<Expr>> const& args) override
     {
-        return mBody->eval(std::shared_ptr<Env>{mEnvironment}->extend(mParameters, args, mVariadic));
+        return mBody->eval(mEnvironment->extend(mParameters, args, mVariadic));
     }
     std::string toString() const override
     {
