@@ -101,6 +101,11 @@ public:
     }
     MExprPtr sexpr()
     {
+        if (mLookAhead.type == TokenType::kQUOTE)
+        {
+            consume();
+            return vecToMCons({MExprPtr{new MAtomic{"quote"}}, sexpr()});
+        }
         if (mLookAhead.type == TokenType::kL_PAREN)
         {
             return parenthesized();

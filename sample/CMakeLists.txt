@@ -110,3 +110,8 @@ do_test(test_quote_num "(quote 2)" 2)
 do_test(test_quote_id "(quote x)" "'x")
 do_test(test_quote_nil "(quote ())" "()")
 do_test(test_quote_list "(quote (1 xy 23))" "(1 'xy 23)")
+
+do_test(test_short_quote_num "'2" 2)
+do_test(test_short_quote_id "' x" "'x")
+do_test(test_short_quote_nil "'()" "()")
+do_test(test_short_quote_list "'(1 xy 23)" "(1 'xy 23)")

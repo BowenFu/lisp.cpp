@@ -11,6 +11,7 @@ enum class TokenType
 {
     kL_PAREN,
     kR_PAREN,
+    kQUOTE,
     kWORD,
     kEOF
 };
@@ -69,6 +70,9 @@ public:
             case ')':
                 consume();
                 return Token{TokenType::kR_PAREN, std::string{c}};
+            case '\'':
+                consume();
+                return Token{TokenType::kQUOTE, std::string{c}};
             default:
                 return wordToken();
             }
