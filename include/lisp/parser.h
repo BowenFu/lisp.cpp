@@ -97,6 +97,20 @@ inline ExprPtr or_(MExprPtr const& mexpr)
     return std::make_shared<Or>(parseActions(mexpr));
 }
 
+inline auto parseAsQuoted(MExprPtr const& mexpr) -> ExprPtr;
+
+inline ExprPtr quote(MExprPtr const& mexpr)
+{
+    auto e = dynamic_cast<MCons*>(mexpr.get());
+    ASSERT(e);
+    auto car = e->car();
+    ASSERT(car);
+    // assert mexpr is the last one
+    auto cdr = e->cdr();
+    ASSERT(cdr == MNil::instance());
+    return parseAsQuoted(car);
+}
+
 inline ExprPtr definition(MExprPtr const& mexpr)
 {
     auto [car, cdr] = deCons(mexpr);
@@ -222,7 +236,7 @@ inline auto tryMCons(MExprPtr const& mexpr) -> ExprPtr
     auto carStr = asString(car);
     if (!carStr.has_value())
     {
-        // as MCons
+        // car as MCons
         return application(car, cdr);
     }
     if (carStr == "define")
@@ -257,6 +271,10 @@ inline auto tryMCons(MExprPtr const& mexpr) -> ExprPtr
     {
         return or_(cdr);
     }
+    else if (carStr == "quote")
+    {
+        return quote(cdr);
+    }
     return application(car, cdr);
 }
 
@@ -274,4 +292,42 @@ inline auto parse(MExprPtr const& mexpr) -> ExprPtr
     return {};
 }
 
+inline auto atomicToQuoted(ExprPtr const& expr)
+{
+    if (auto var = dynamic_cast<Variable const*>(expr.get()))
+    {
+        return ExprPtr{new Symbol{var->name()}};
+    }
+    if (auto sym = dynamic_cast<Symbol const*>(expr.get()))
+    {
+        static auto quoteSym = ExprPtr{new Symbol{"quote"}}; 
+        return ExprPtr{new Cons{quoteSym, expr}};
+    }
+    return expr;
+}
+
+inline auto consToQuoted(MExprPtr const& mexpr) -> ExprPtr
+{
+    if (mexpr == MNil::instance())
+    {
+        return nil();
+    }
+    auto cons = dynamic_cast<MCons*>(mexpr.get());
+    ASSERT(cons);
+    auto car = cons->car();
+    auto cdr = cons->cdr();
+    return ExprPtr{new Cons{parseAsQuoted(car), consToQuoted(cdr)}};
+}
+
+inline auto parseAsQuoted(MExprPtr const& mexpr) -> ExprPtr
+{
+    // if mexpr is atomic, varToSym, symToQuoteSym
+    if (auto atomic = tryMAtomic(mexpr))
+    {
+        return atomicToQuoted(atomic);
+    }
+
+    // else mexpr is cons, map quote on it
+    return consToQuoted(mexpr);
+}
 #endif // LISP_PARSER_H
