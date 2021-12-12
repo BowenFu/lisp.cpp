@@ -298,7 +298,7 @@ inline auto atomicToQuoted(ExprPtr const& expr)
     {
         return ExprPtr{new Symbol{var->name()}};
     }
-    if (auto sym = dynamic_cast<Symbol const*>(expr.get()))
+    if (dynamic_cast<Symbol const*>(expr.get()))
     {
         static auto quoteSym = ExprPtr{new Symbol{"quote"}}; 
         return ExprPtr{new Cons{quoteSym, expr}};
