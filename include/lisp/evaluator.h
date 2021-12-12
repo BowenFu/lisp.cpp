@@ -56,8 +56,7 @@ public:
     }
     ExprPtr defineVariable(std::string const& variableName, ExprPtr value)
     {
-        auto iter = mFrame.find(variableName);
-        if (iter != mFrame.end())
+        if (mFrame.count(variableName))
         {
             throw std::runtime_error{"call defineVariable to defined variables."};
         }
@@ -168,7 +167,7 @@ public:
     }
 };
 
-class Cons final: public Expr
+class Cons final: public Expr, public std::enable_shared_from_this<Cons>
 {
     ExprPtr mCar;
     ExprPtr mCdr;
@@ -179,7 +178,7 @@ public:
     {}
     ExprPtr eval(std::shared_ptr<Env> const& /* env */) override
     {
-        return ExprPtr{new Cons(*this)};
+        return shared_from_this();
     }
     std::string toString() const override
     {
@@ -252,15 +251,22 @@ public:
     }
 };
 
-class Quoted final : public Expr
+class Symbol final : public Expr, public std::enable_shared_from_this<Symbol>
 {
-    ExprPtr mContent;
+    std::string mInternal;
 public:
+    explicit Symbol(std::string const& name)
+    : mInternal{name}
+    {
+    }
     ExprPtr eval(std::shared_ptr<Env> const& /* env */) override
     {
-        return mContent;
+        return shared_from_this();
     }
-    std::string toString() const override;
+    std::string toString() const override
+    {
+        return "'" + mInternal;
+    }
 };
 
 class Assignment final : public Expr
