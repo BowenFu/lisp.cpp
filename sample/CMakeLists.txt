@@ -124,3 +124,5 @@ do_test(test_quote_unquote_sym "(quote (unquote 'x))" "'x")
 do_test(test_quasiquote_unquote_lst "`,(+ 1 2)" "3")
 do_test(test_quasiquote_lst_unquote_lst "`(,(+ 1 2))" "(3)")
 do_test(test_quasiquote_pair_unquote_lst "`(1 . ,(+ 1 2))" "(1 . 3)")
+
+do_test(test_quasiquote_nested_unquote "\`(1 \`,(+ 1 ,(+ 2 3)) 4)" "\\\\(1 \\\\(\'quasiquote \\\\(\'unquote \\\\(\'\\\\+ 1 5\\\\)\\\\)\\\\) 4\\\\)")

@@ -219,20 +219,6 @@ public:
     }
 };
 
-class Unquote final: public Expr
-{
-    MExprPtr mInternal;
-public:
-    explicit Unquote(MExprPtr const& mexpr)
-    : mInternal{mexpr}
-    {}
-    ExprPtr eval(std::shared_ptr<Env> const& /* env */) override;
-    std::string toString() const override
-    {
-        return mInternal->toString();
-    }
-};
-
 template <typename Iter>
 ExprPtr vecToCons(Iter begin, Iter end)
 {
