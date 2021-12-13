@@ -97,7 +97,7 @@ inline ExprPtr or_(MExprPtr const& mexpr)
     return std::make_shared<Or>(parseActions(mexpr));
 }
 
-inline auto parseAsQuoted(MExprPtr const& mexpr, bool quasi) -> ExprPtr;
+inline auto parseAsQuoted(MExprPtr const& mexpr, std::optional<int32_t> quasiquoteLevel) -> ExprPtr;
 
 inline MExprPtr assertIsLastAndGet(MExprPtr const& mexpr)
 {
@@ -113,12 +113,12 @@ inline MExprPtr assertIsLastAndGet(MExprPtr const& mexpr)
 
 inline ExprPtr quote(MExprPtr const& mexpr)
 {
-    return parseAsQuoted(assertIsLastAndGet(mexpr), /* quasi = */ false);
+    return parseAsQuoted(assertIsLastAndGet(mexpr), /* quasiquoteLevel = */ {});
 }
 
 inline ExprPtr quasiquote(MExprPtr const& mexpr)
 {
-    return parseAsQuoted(assertIsLastAndGet(mexpr), /* quasi = */ true);
+    return parseAsQuoted(assertIsLastAndGet(mexpr), /* quasiquoteLevel = */ 1);
 }
 
 inline ExprPtr definition(MExprPtr const& mexpr)
@@ -321,10 +321,10 @@ inline auto atomicToQuoted(ExprPtr const& expr)
 
 inline ExprPtr unquote(MExprPtr const& mexpr)
 {
-    return ExprPtr{new Unquote{assertIsLastAndGet(mexpr)}};
+    return parse(assertIsLastAndGet(mexpr));
 }
 
-inline auto consToQuoted(MExprPtr const& mexpr, bool quasi) -> ExprPtr
+inline auto consToQuoted(MExprPtr const& mexpr, std::optional<int32_t> quasiquoteLevel) -> ExprPtr
 {
     if (mexpr == MNil::instance())
     {
@@ -334,14 +334,27 @@ inline auto consToQuoted(MExprPtr const& mexpr, bool quasi) -> ExprPtr
     ASSERT(cons);
     auto car = cons->car();
     auto cdr = cons->cdr();
-    if (quasi && car->toString() == "unquote")
+    auto carStr = car->toString();
+    if (quasiquoteLevel)
     {
-        return unquote(cdr);
+        if (carStr == "unquote")
+        {
+            if ( quasiquoteLevel.value() == 1)
+            {
+                return unquote(cdr);
+            }
+            --(*quasiquoteLevel);
+        }
+        else if (carStr == "quasiquote")
+        {
+            ++(*quasiquoteLevel);
+        }
     }
-    return ExprPtr{new Cons{parseAsQuoted(car, quasi), consToQuoted(cdr, quasi)}};
+    return ExprPtr{new Cons{parseAsQuoted(car, quasiquoteLevel), consToQuoted(cdr, quasiquoteLevel)}};
 }
 
-inline auto parseAsQuoted(MExprPtr const& mexpr, bool quasi) -> ExprPtr
+// TODO: change quasi to quote level.
+inline auto parseAsQuoted(MExprPtr const& mexpr, std::optional<int32_t> quasiquoteLevel) -> ExprPtr
 {
     if (auto atomic = tryMAtomic(mexpr))
     {
@@ -349,6 +362,6 @@ inline auto parseAsQuoted(MExprPtr const& mexpr, bool quasi) -> ExprPtr
     }
 
     // else mexpr is cons, map quote on it
-    return consToQuoted(mexpr, quasi);
+    return consToQuoted(mexpr, quasiquoteLevel);
 }
 #endif // LISP_PARSER_H
