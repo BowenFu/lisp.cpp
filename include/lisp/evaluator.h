@@ -167,7 +167,7 @@ public:
     }
 };
 
-class Cons final: public Expr, public std::enable_shared_from_this<Cons>
+class Cons final: public Expr
 {
     ExprPtr mCar;
     ExprPtr mCdr;
@@ -176,9 +176,9 @@ public:
     : mCar{car_}
     , mCdr{cdr_}
     {}
-    ExprPtr eval(std::shared_ptr<Env> const& /* env */) override
+    ExprPtr eval(std::shared_ptr<Env> const& env) override
     {
-        return shared_from_this();
+        return ExprPtr{new Cons{mCar->eval(env), mCdr->eval(env)}};
     }
     std::string toString() const override
     {
@@ -216,6 +216,20 @@ public:
             return car()->equalTo(theOther->car()) && cdr()->equalTo(theOther->cdr());
         }
         return false;
+    }
+};
+
+class Unquote final: public Expr
+{
+    MExprPtr mInternal;
+public:
+    explicit Unquote(MExprPtr const& mexpr)
+    : mInternal{mexpr}
+    {}
+    ExprPtr eval(std::shared_ptr<Env> const& /* env */) override;
+    std::string toString() const override
+    {
+        return mInternal->toString();
     }
 };
 

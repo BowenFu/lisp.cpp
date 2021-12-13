@@ -1,4 +1,5 @@
 #include "lisp/evaluator.h"
+#include "lisp/parser.h"
 
 ExprPtr true_()
 {
@@ -27,4 +28,9 @@ ExprPtr Lambda::eval(std::shared_ptr<Env> const& env)
 ExprPtr Definition::eval(std::shared_ptr<Env> const& env)
 {
     return env->defineVariable(mVariableName, mValue->eval(env));
+}
+
+ExprPtr Unquote::eval(std::shared_ptr<Env> const& env)
+{
+    return parse(mInternal)->eval(env);
 }
