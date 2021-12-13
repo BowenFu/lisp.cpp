@@ -119,3 +119,6 @@ do_test(test_short_quote_nil "'()" "()")
 do_test(test_short_quote_list "'(1 xy 23)" "(1 'xy 23)")
 do_test(test_short_quote_sym "''x" "('quote 'x)")
 do_test(test_short_quote_quoted_list "''(x)" "\\\\('quote \\\\('x\\\\)\\\\)")
+
+do_test(test_quote_unquote_sym "(quote (unquote 'x))" "'x")
+do_test(test_quasiquote_unquote_lst "`,(+ 1 2)" "3")

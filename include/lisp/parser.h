@@ -97,9 +97,9 @@ inline ExprPtr or_(MExprPtr const& mexpr)
     return std::make_shared<Or>(parseActions(mexpr));
 }
 
-inline auto parseAsQuoted(MExprPtr const& mexpr) -> ExprPtr;
+inline auto parseAsQuoted(MExprPtr const& mexpr, bool quasi) -> ExprPtr;
 
-inline ExprPtr quote(MExprPtr const& mexpr)
+inline MExprPtr assertIsLastAndGet(MExprPtr const& mexpr)
 {
     auto e = dynamic_cast<MCons*>(mexpr.get());
     ASSERT(e);
@@ -108,7 +108,17 @@ inline ExprPtr quote(MExprPtr const& mexpr)
     // assert mexpr is the last one
     auto cdr = e->cdr();
     ASSERT(cdr == MNil::instance());
-    return parseAsQuoted(car);
+    return car;
+}
+
+inline ExprPtr quote(MExprPtr const& mexpr)
+{
+    return parseAsQuoted(assertIsLastAndGet(mexpr), /* quasi = */ false);
+}
+
+inline ExprPtr quasiquote(MExprPtr const& mexpr)
+{
+    return parseAsQuoted(assertIsLastAndGet(mexpr), /* quasi = */ true);
 }
 
 inline ExprPtr definition(MExprPtr const& mexpr)
@@ -275,6 +285,10 @@ inline auto tryMCons(MExprPtr const& mexpr) -> ExprPtr
     {
         return quote(cdr);
     }
+    else if (carStr == "quasiquote")
+    {
+        return quasiquote(cdr);
+    }
     return application(car, cdr);
 }
 
@@ -300,13 +314,17 @@ inline auto atomicToQuoted(ExprPtr const& expr)
     }
     if (dynamic_cast<Symbol const*>(expr.get()))
     {
-        static auto quoteSym = ExprPtr{new Symbol{"quote"}}; 
-        return ExprPtr{new Cons{quoteSym, expr}};
+        FAIL("Symbol should not appear as atomic!");
     }
     return expr;
 }
 
-inline auto consToQuoted(MExprPtr const& mexpr) -> ExprPtr
+inline ExprPtr unquote(MExprPtr const& mexpr)
+{
+    return parse(assertIsLastAndGet(mexpr));
+}
+
+inline auto consToQuoted(MExprPtr const& mexpr, bool quasi) -> ExprPtr
 {
     if (mexpr == MNil::instance())
     {
@@ -316,18 +334,21 @@ inline auto consToQuoted(MExprPtr const& mexpr) -> ExprPtr
     ASSERT(cons);
     auto car = cons->car();
     auto cdr = cons->cdr();
-    return ExprPtr{new Cons{parseAsQuoted(car), consToQuoted(cdr)}};
+    if (quasi && car->toString() == "unquote")
+    {
+        return unquote(cdr);
+    }
+    return ExprPtr{new Cons{parseAsQuoted(car, quasi), consToQuoted(cdr, quasi)}};
 }
 
-inline auto parseAsQuoted(MExprPtr const& mexpr) -> ExprPtr
+inline auto parseAsQuoted(MExprPtr const& mexpr, bool quasi) -> ExprPtr
 {
-    // if mexpr is atomic, varToSym, symToQuoteSym
     if (auto atomic = tryMAtomic(mexpr))
     {
         return atomicToQuoted(atomic);
     }
 
     // else mexpr is cons, map quote on it
-    return consToQuoted(mexpr);
+    return consToQuoted(mexpr, quasi);
 }
 #endif // LISP_PARSER_H

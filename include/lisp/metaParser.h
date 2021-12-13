@@ -106,6 +106,16 @@ public:
             consume();
             return vecToMCons({MExprPtr{new MAtomic{"quote"}}, sexpr()});
         }
+        if (mLookAhead.type == TokenType::kQUASI_QUOTE)
+        {
+            consume();
+            return vecToMCons({MExprPtr{new MAtomic{"quasiquote"}}, sexpr()});
+        }
+        if (mLookAhead.type == TokenType::kUNQUOTE)
+        {
+            consume();
+            return vecToMCons({MExprPtr{new MAtomic{"unquote"}}, sexpr()});
+        }
         if (mLookAhead.type == TokenType::kL_PAREN)
         {
             return parenthesized();
