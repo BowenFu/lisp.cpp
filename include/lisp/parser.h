@@ -321,7 +321,7 @@ inline auto atomicToQuoted(ExprPtr const& expr)
 
 inline ExprPtr unquote(MExprPtr const& mexpr)
 {
-    return parse(assertIsLastAndGet(mexpr));
+    return ExprPtr{new Unquote{assertIsLastAndGet(mexpr)}};
 }
 
 inline auto consToQuoted(MExprPtr const& mexpr, bool quasi) -> ExprPtr
