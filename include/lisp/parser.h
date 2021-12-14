@@ -148,12 +148,23 @@ inline ExprPtr assignment(MExprPtr const& mexpr)
     return ExprPtr{new Assignment(var, value)};
 }
 
-inline ExprPtr lambda(MExprPtr const& mexpr)
+template <typename LambdaT>
+inline ExprPtr lambdaBase(MExprPtr const& mexpr)
 {
     auto [car, cdr] = deCons(mexpr);
     auto params = parseParams(car);
     auto body = sequence(cdr);
-    return ExprPtr{new Lambda(params.first, params.second, body)};
+    return ExprPtr{new LambdaT(params.first, params.second, body)};
+}
+
+inline ExprPtr lambda(MExprPtr const& mexpr)
+{
+    return lambdaBase<Lambda>(mexpr);
+}
+
+inline ExprPtr macro(MExprPtr const& mexpr)
+{
+    return lambdaBase<Macro>(mexpr);
 }
 
 inline ExprPtr if_(MExprPtr const& mexpr)
@@ -260,6 +271,10 @@ inline auto tryMCons(MExprPtr const& mexpr) -> ExprPtr
     else if (carStr == "lambda")
     {
         return lambda(cdr);
+    }
+    else if (carStr == "macro")
+    {
+        return macro(cdr);
     }
     else if (carStr == "if")
     {
