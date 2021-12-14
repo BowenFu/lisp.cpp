@@ -289,6 +289,8 @@ public:
     }
 };
 
+class Macro;
+
 class Definition final : public Expr
 {
     std::string mVariableName;
@@ -299,6 +301,7 @@ public:
     , mValue{value}
     {
     }
+    bool isMacroDefinition() const;
     ExprPtr eval(std::shared_ptr<Env> const& env) override;
     std::string toString() const override
     {
@@ -310,7 +313,7 @@ inline bool isTrue(ExprPtr expr)
 {
     using T = Literal<bool>;
     T const* v = dynamic_cast<T const*>(expr.get());
-    return v != nullptr && v->get();
+    return v == nullptr || v->get();
 }
 
 class If final : public Expr
@@ -391,22 +394,38 @@ public:
     }
 };
 
-class Lambda final : public Expr
+class LambdaBase : public Expr
 {
     std::vector<std::string> mParameters;
     bool mVariadic;
     std::shared_ptr<Sequence> mBody;
 public:
-    Lambda(std::vector<std::string> const& params, bool variadic, std::shared_ptr<Sequence> body)
+    LambdaBase(std::vector<std::string> const& params, bool variadic, std::shared_ptr<Sequence> body)
     : mParameters{params}
     , mVariadic{variadic}
     , mBody{body}
     {
     }
     ExprPtr eval(std::shared_ptr<Env> const& env) override;
+};
+
+class Lambda final : public LambdaBase
+{
+public:
+    using LambdaBase::LambdaBase;
     std::string toString() const override
     {
         return "Lambda";
+    }
+};
+
+class Macro final : public LambdaBase
+{
+public:
+    using LambdaBase::LambdaBase;
+    std::string toString() const override
+    {
+        return "Macro";
     }
 };
 
@@ -473,14 +492,15 @@ public:
     }
 };
 
-class CompoundProcedure : public Procedure
+class CompoundProcedureBase : public Procedure, public std::enable_shared_from_this<CompoundProcedureBase>
 {
     std::shared_ptr<Sequence> mBody;
     std::vector<std::string> mParameters;
     bool mVariadic;
     std::shared_ptr<Env> mEnvironment;
+    virtual std::string getClassName() const = 0;
 public:
-    CompoundProcedure(std::shared_ptr<Sequence> body, std::vector<std::string> parameters, bool variadic, std::shared_ptr<Env> const& environment)
+    CompoundProcedureBase(std::shared_ptr<Sequence> body, std::vector<std::string> parameters, bool variadic, std::shared_ptr<Env> const& environment)
     : mBody{body}
     , mParameters{parameters}
     , mVariadic{variadic}
@@ -488,7 +508,7 @@ public:
     {}
     ExprPtr eval(std::shared_ptr<Env> const& /* env */) override
     {
-        return ExprPtr{new CompoundProcedure{mBody, mParameters, mVariadic, mEnvironment}};
+        return shared_from_this();
     }
     std::shared_ptr<Expr> apply(std::vector<std::shared_ptr<Expr>> const& args) override
     {
@@ -496,27 +516,47 @@ public:
     }
     std::string toString() const override
     {
-        std::ostringstream o;
-        o << "CompoundProcedure (";
-        if (!mParameters.empty())
-        {
-            for (auto i = mParameters.begin(); i != std::prev(mParameters.end()); ++i)
+            std::ostringstream o;
+            o << getClassName() << " (";
+            if (!mParameters.empty())
             {
-                o << *i << " ";
+                for (auto i = mParameters.begin(); i != std::prev(mParameters.end()); ++i)
+                {
+                    o << *i << " ";
+                }
+                if (mVariadic)
+                {
+                    o << ". ";
+                }
+                if (mParameters.size() >= 1)
+                {
+                    o << mParameters.back();
+                }
+                o << ", ";
             }
-            if (mVariadic)
-            {
-                o << ". ";
-            }
-            if (mParameters.size() >= 1)
-            {
-                o << mParameters.back();
-            }
-            o << ", ";
+            o << "<procedure-env>)";
+            return o.str();
         }
-        o << "<procedure-env>)";
-        return o.str();
+};
+
+class CompoundProcedure final : public CompoundProcedureBase
+{
+    std::string getClassName() const override
+    {
+        return "CompoundProcedure";
     }
+public:
+    using CompoundProcedureBase::CompoundProcedureBase;
+};
+
+class MacroProcedure final : public CompoundProcedureBase
+{
+    std::string getClassName() const override
+    {
+        return "MacroProcedure";
+    }
+public:
+    using CompoundProcedureBase::CompoundProcedureBase;
 };
 
 class Application final : public Expr
@@ -528,6 +568,10 @@ public:
     : mOperator{op}
     , mOperands{params}
     {}
+    bool isMacroCall() const
+    {
+        return dynamic_cast<MacroProcedure const*>(mOperator.get());
+    }
     ExprPtr eval(std::shared_ptr<Env> const& env) override
     {
         auto op = mOperator->eval(env);
@@ -536,8 +580,67 @@ public:
     }
     std::string toString() const override
     {
-        return "Application (" + mOperator->toString() + ")";
+        std::ostringstream o;
+        o << "Application (" << mOperator->toString();
+        for (auto const& e: mOperands)
+        {
+            o << " " << e->toString();
+        }
+        o << ")";
+        return o.str();
     }
 };
+
+template <typename Func>
+void forEach(ExprPtr const& expr, Func func)
+{
+    if (auto e = dynamic_cast<Cons const*>(expr.get()))
+    {
+        forEach(e->car(), func);
+        forEach(e->cdr(), func);
+    }
+    func(expr);
+}
+
+template <typename Func>
+ExprPtr transform(ExprPtr const& expr, Func func)
+{
+    if (auto e = dynamic_cast<Cons const*>(expr.get()))
+    {
+        return ExprPtr{new Cons{transform(e->car(), func), transform(e->cdr(), func)}};
+    }
+    return func(expr);
+}
+
+inline ExprPtr expandMacros(ExprPtr const& expr, std::shared_ptr<Env> const& env)
+{
+    auto func = [&env](auto const& expr)
+    {
+        if (auto a = dynamic_cast<Application*>(expr.get()))
+        {
+            if (a->isMacroCall())
+            {
+                return a->eval(env);
+            }
+        }
+        return expr;
+    };
+    return transform(expr, func);
+}
+
+inline void defineMacros(ExprPtr const& expr, std::shared_ptr<Env> const& env)
+{
+    auto func = [&env](auto const& expr)
+    {
+        if (auto d = dynamic_cast<Definition*>(expr.get()))
+        {
+            if (d->isMacroDefinition())
+            {
+                d->eval(env);
+            }
+        }
+    };
+    forEach(expr, func);
+}
 
 #endif // LISP_EVALUATOR_H

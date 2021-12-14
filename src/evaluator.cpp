@@ -1,4 +1,5 @@
 #include "lisp/evaluator.h"
+#include "lisp/parser.h"
 
 ExprPtr true_()
 {
@@ -18,7 +19,7 @@ ExprPtr nil()
     return n;
 }
 
-ExprPtr Lambda::eval(std::shared_ptr<Env> const& env)
+ExprPtr LambdaBase::eval(std::shared_ptr<Env> const& env)
 {
     CompoundProcedure proc{mBody, mParameters, mVariadic, env};
     return std::shared_ptr<Expr>(new CompoundProcedure(proc));
@@ -27,4 +28,9 @@ ExprPtr Lambda::eval(std::shared_ptr<Env> const& env)
 ExprPtr Definition::eval(std::shared_ptr<Env> const& env)
 {
     return env->defineVariable(mVariableName, mValue->eval(env));
+}
+
+bool Definition::isMacroDefinition() const
+{
+    return dynamic_cast<Macro const*>(mValue.get());
 }
