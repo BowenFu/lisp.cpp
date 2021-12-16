@@ -1,7 +1,12 @@
 #ifndef LISP_EVALUATOR_H
 #define LISP_EVALUATOR_H
 
-#include "lisp/meta.h"
+#include "meta.h"
+#include <memory>
+#include <map>
+#include <vector>
+#include <string>
+#include <sstream>
 
 class Expr;
 using ExprPtr = std::shared_ptr<Expr>;
@@ -53,6 +58,14 @@ public:
         }
         iter->second = value;
         return value;
+    }
+    bool variableDefined(std::string const& variableName)
+    {
+        if (mFrame.count(variableName))
+        {
+            return true;
+        }
+        return false;
     }
     ExprPtr defineVariable(std::string const& variableName, ExprPtr value)
     {
@@ -143,6 +156,12 @@ public:
 using Number = Literal<double>;
 using String = Literal<std::string>;
 using Bool = Literal<bool>;
+
+template <>
+inline std::string Literal<std::string>::toString() const
+{
+    return "\"" + mValue + "\"";
+}
 
 ExprPtr true_();
 ExprPtr false_();
@@ -266,6 +285,33 @@ public:
     std::string toString() const override
     {
         return "'" + mInternal;
+    }
+    std::string get() const
+    {
+        return mInternal;
+    }
+};
+
+// For meta parser only
+class RawWord final : public Expr, public std::enable_shared_from_this<RawWord>
+{
+    std::string mInternal;
+public:
+    explicit RawWord(std::string const& name)
+    : mInternal{name}
+    {
+    }
+    ExprPtr eval(std::shared_ptr<Env> const& /* env */) override
+    {
+        return shared_from_this();
+    }
+    std::string toString() const override
+    {
+        return mInternal;
+    }
+    std::string get() const
+    {
+        return mInternal;
     }
 };
 
@@ -394,6 +440,7 @@ public:
     }
 };
 
+template <typename ProcedureT>
 class LambdaBase : public Expr
 {
     std::vector<std::string> mParameters;
@@ -406,10 +453,15 @@ public:
     , mBody{body}
     {
     }
-    ExprPtr eval(std::shared_ptr<Env> const& env) override;
+    ExprPtr eval(std::shared_ptr<Env> const& env) override
+    {
+        return std::shared_ptr<Expr>{new ProcedureT{mBody, mParameters, mVariadic, env}};
+    }
 };
 
-class Lambda final : public LambdaBase
+class CompoundProcedure;
+
+class Lambda final : public LambdaBase<CompoundProcedure>
 {
 public:
     using LambdaBase::LambdaBase;
@@ -419,7 +471,9 @@ public:
     }
 };
 
-class Macro final : public LambdaBase
+class MacroProcedure;
+
+class Macro final : public LambdaBase<MacroProcedure>
 {
 public:
     using LambdaBase::LambdaBase;
@@ -549,6 +603,16 @@ public:
     using CompoundProcedureBase::CompoundProcedureBase;
 };
 
+template <typename Func>
+ExprPtr transform(ExprPtr const& expr, Func func)
+{
+    if (auto e = dynamic_cast<Cons const*>(expr.get()))
+    {
+        return ExprPtr{new Cons{transform(e->car(), func), transform(e->cdr(), func)}};
+    }
+    return func(expr);
+}
+
 class MacroProcedure final : public CompoundProcedureBase
 {
     std::string getClassName() const override
@@ -557,6 +621,7 @@ class MacroProcedure final : public CompoundProcedureBase
     }
 public:
     using CompoundProcedureBase::CompoundProcedureBase;
+    ExprPtr apply(std::vector<std::shared_ptr<Expr> > const &args) override;
 };
 
 class Application final : public Expr
@@ -568,14 +633,15 @@ public:
     : mOperator{op}
     , mOperands{params}
     {}
-    bool isMacroCall() const
-    {
-        return dynamic_cast<MacroProcedure const*>(mOperator.get());
-    }
+    // bool isMacroCall() const
+    // {
+    //     return dynamic_cast<MacroProcedure const*>(mOperator.get());
+    // }
     ExprPtr eval(std::shared_ptr<Env> const& env) override
     {
         auto op = mOperator->eval(env);
-        auto args = listOfValues(mOperands, env);
+        auto isMacroCall = dynamic_cast<MacroProcedure const*>(op.get());
+        auto args = isMacroCall ? mOperands : listOfValues(mOperands, env);
         return dynamic_cast<Procedure&>(*op).apply(args);
     }
     std::string toString() const override
@@ -590,57 +656,5 @@ public:
         return o.str();
     }
 };
-
-template <typename Func>
-void forEach(ExprPtr const& expr, Func func)
-{
-    if (auto e = dynamic_cast<Cons const*>(expr.get()))
-    {
-        forEach(e->car(), func);
-        forEach(e->cdr(), func);
-    }
-    func(expr);
-}
-
-template <typename Func>
-ExprPtr transform(ExprPtr const& expr, Func func)
-{
-    if (auto e = dynamic_cast<Cons const*>(expr.get()))
-    {
-        return ExprPtr{new Cons{transform(e->car(), func), transform(e->cdr(), func)}};
-    }
-    return func(expr);
-}
-
-inline ExprPtr expandMacros(ExprPtr const& expr, std::shared_ptr<Env> const& env)
-{
-    auto func = [&env](auto const& expr)
-    {
-        if (auto a = dynamic_cast<Application*>(expr.get()))
-        {
-            if (a->isMacroCall())
-            {
-                return a->eval(env);
-            }
-        }
-        return expr;
-    };
-    return transform(expr, func);
-}
-
-inline void defineMacros(ExprPtr const& expr, std::shared_ptr<Env> const& env)
-{
-    auto func = [&env](auto const& expr)
-    {
-        if (auto d = dynamic_cast<Definition*>(expr.get()))
-        {
-            if (d->isMacroDefinition())
-            {
-                d->eval(env);
-            }
-        }
-    };
-    forEach(expr, func);
-}
 
 #endif // LISP_EVALUATOR_H

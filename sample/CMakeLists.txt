@@ -129,3 +129,7 @@ do_test(test_quasiquote_nested_unquote "\`(1 \`,(+ 1 ,(+ 2 3)) 4)" "\\\\(1 \\\\(
 
 do_test(test_macro_and "(define myAnd (macro (x y) (if x y #f))) (myAnd (+ 1 2) (+ 3 4))" "7")
 do_test(test_macro_or "(define myOr (macro (x y) (if x x y))) (myOr (+ 1 2) (+ 3 4))" "3")
+
+do_test(test_macro_negate "(define negate (macro (x) `(,- ,x))) (negate 1)" "1")
+do_test(test_macro_negate "(define negate (macro (x) `(,- ,x))) (negate (+ 1 1))" "1")
+do_test(test_macro_negate "(define negate (macro (x) `(* ,x 2))) (negate (+ 1 1))" "4")

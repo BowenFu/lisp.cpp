@@ -1,6 +1,7 @@
 #include "lisp/metaParser.h"
 #include "lisp/parser.h"
 #include "gtest/gtest.h"
+#include <numeric>
 
 TEST(Lexer, 1)
 {
@@ -169,37 +170,37 @@ TEST(Parser, Assignment)
 }
 
 template <typename C = std::initializer_list<std::string>>
-auto strToMExpr(C const& strs)
+auto strToExpr(C const& strs)
 {
-    std::vector<MExprPtr> sexprs;
+    std::vector<ExprPtr> sexprs;
     sexprs.reserve(strs.size());
     std::transform(strs.begin(), strs.end(), std::back_inserter(sexprs),
                    [](auto s)
-                   { return MExprPtr{new MAtomic{s}}; });
+                   { return ExprPtr{new RawWord{s}}; });
     return sexprs;
 }
 
-TEST(vecToMCons, 1)
+TEST(vecToCons, 1)
 {
     auto strs = {"1", ".", "2"};
-    auto sexprs = strToMExpr(strs);
-    auto cons = vecToMCons(sexprs);
+    auto sexprs = strToExpr(strs);
+    auto cons = vecToCons(sexprs);
     EXPECT_EQ(cons->toString(), "(1 . 2)");
 }
 
-TEST(vecToMCons, 2)
+TEST(vecToCons, 2)
 {
     auto strs = {"1", "2"};
-    auto sexprs = strToMExpr(strs);
-    auto cons = vecToMCons(sexprs);
+    auto sexprs = strToExpr(strs);
+    auto cons = vecToCons(sexprs);
     EXPECT_EQ(cons->toString(), "(1 2)");
 }
 
-TEST(vecToMCons, exception)
+TEST(vecToCons, exception)
 {
     auto strs = {".", "2"};
-    auto sexprs = strToMExpr(strs);
-    EXPECT_THROW(vecToMCons(sexprs), std::runtime_error);
+    auto sexprs = strToExpr(strs);
+    EXPECT_THROW(vecToCons(sexprs), std::runtime_error);
 }
 
 TEST(MetaParser, Pair)
@@ -252,7 +253,7 @@ TEST(Parser, number)
 
 TEST(Parser, string)
 {
-    std::initializer_list<std::pair<std::string, std::string>> expected = {{"\" - 1 . 2 () \"", " - 1 . 2 () "}};
+    std::initializer_list<std::pair<std::string, std::string>> expected = {{"\" - 1 . 2 () \"", "\" - 1 . 2 () \""}};
 
     Lexer lex("\" - 1 . 2 () \"");
     MetaParser p(lex);
@@ -473,7 +474,7 @@ TEST(Parser, Application)
 TEST(Parser, Application2)
 {
     std::initializer_list<std::pair<std::string, std::string> > expected = {{"Definition ( i : Lambda )", "CompoundProcedure (x, <procedure-env>)"},
-                                                                   {"Application (i .)", "."}};
+                                                                   {"Application (i \".\")", "\".\""}};
 
     Lexer lex("(define i (lambda (x) x)) (i \".\")");
     MetaParser p(lex);

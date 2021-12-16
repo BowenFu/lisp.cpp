@@ -1,5 +1,6 @@
 #include "lisp/evaluator.h"
 #include "lisp/parser.h"
+#include <numeric>
 
 auto consOp = [](std::vector<std::shared_ptr<Expr>> const& args)
 {
@@ -145,11 +146,10 @@ auto eval(std::string const& input, std::shared_ptr<Env> const& env)
     do
     {
         auto me = p.sexpr();
-        auto e = parse(me);
-        // define macros
-        defineMacros(e, macroEnv);
-        auto ee = expandMacros(e, macroEnv);
-        result = ee->eval(env)->toString();
+        defineMacros(me, macroEnv);
+        auto ee = expandMacros(me, macroEnv);
+        auto e = parse(ee);
+        result = e->eval(env)->toString();
     } while (!p.eof());
     return result;
 }
