@@ -134,4 +134,5 @@ do_test(test_macro_negate_num "(define negate (macro (x) `(- ,x))) (negate 1)" "
 do_test(test_macro_negate_add "(define negate (macro (x) `(- ,x))) (negate (+ 1 1))" "-2")
 do_test(test_macro_double "(define double (macro (x) `(* ,x 2))) (double (+ 1 1))" "4")
 
-do_test(test_macro_show "(define show (macro (x) `(car ',x))) (show (+ 1 1))" "'+")
+do_test(test_macro_show "(define show (macro (x) `(list ',x))) (show (+ 1 1))" "\\\\(\\\\'\\\\+ 1 1\\\\)")
+do_test(test_macro_first "(define first (macro (x) `(car ',x))) (first (+ 1 1))" "'+")
