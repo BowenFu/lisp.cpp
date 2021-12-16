@@ -8,6 +8,7 @@
 #include <string>
 #include <sstream>
 #include <algorithm>
+#include <functional>
 
 class Expr;
 using ExprPtr = std::shared_ptr<Expr>;
