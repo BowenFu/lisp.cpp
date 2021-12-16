@@ -2,6 +2,8 @@
 #include "lisp/parser.h"
 #include <numeric>
 
+#define DEBUG 0
+
 auto consOp = [](std::vector<std::shared_ptr<Expr>> const& args)
 {
     ASSERT(args.size() == 2);
@@ -148,7 +150,13 @@ auto eval(std::string const& input, std::shared_ptr<Env> const& env)
         auto me = p.sexpr();
         defineMacros(me, macroEnv);
         auto ee = expandMacros(me, macroEnv);
+#if DEBUG
+        std::cout << "ee ## " << ee->toString() << std::endl; 
+#endif // DEBUG
         auto e = parse(ee);
+#if DEBUG
+        std::cout << "e ## " << e->toString() << std::endl; 
+#endif // DEBUG
         result = e->eval(env)->toString();
     } while (!p.eof());
     return result;

@@ -69,6 +69,19 @@ inline ExprPtr listBack(ExprPtr const& expr)
     return car;
 }
 
+inline std::vector<ExprPtr> consToVec(ExprPtr const& expr)
+{
+    std::vector<ExprPtr> vec;
+    auto me = expr;
+    while (me != nil())
+    {
+        auto [car, cdr] = deCons(me);
+        vec.push_back(car);
+        me = cdr;
+    }
+    return vec;
+}
+
 inline std::vector<ExprPtr> parseActions(ExprPtr const& expr)
 {
     std::vector<ExprPtr> actions;
@@ -217,6 +230,13 @@ inline ExprPtr application(ExprPtr const& car, ExprPtr const& cdr)
     return ExprPtr{new Application(op, params)};
 }
 
+inline ExprPtr macroApplication(ExprPtr const& car, ExprPtr const& cdr)
+{
+    auto op = parse(car);
+    std::vector<ExprPtr> params = consToVec(cdr);
+    return ExprPtr{new Application(op, params)};
+}
+
 inline ExprPtr application(ExprPtr const& expr)
 {
     auto [car, cdr] = deCons(expr);
@@ -322,12 +342,12 @@ inline auto parseMacroDefinition(ExprPtr const& expr) -> ExprPtr
     return parseCons(carStr.value(), cdr, keywordToHandler);
 }
 
-inline bool isMacroCall(ExprPtr const& expr, std::shared_ptr<Env> const& env)
+inline auto tryMacroCall(ExprPtr const& expr, std::shared_ptr<Env> const& env) -> ExprPtr
 {
     auto cons = dynamic_cast<Cons*>(expr.get());
     if (!cons)
     {
-        return false;
+        return expr;
     }
     auto car = cons->car();
     auto cdr = cons->cdr();
@@ -335,9 +355,13 @@ inline bool isMacroCall(ExprPtr const& expr, std::shared_ptr<Env> const& env)
     if (!carStr.has_value())
     {
         // do nothing
-        return false;
+        return expr;
     }
-    return env->variableDefined(carStr.value());
+    if (env->variableDefined(carStr.value()))
+    {
+        return macroApplication(car, cdr)->eval(env);
+    }
+    return expr;
 }
 
 inline auto parseAndEvalMacroCall(ExprPtr const& expr, std::shared_ptr<Env> const& env) -> ExprPtr
@@ -463,9 +487,9 @@ inline void defineMacros(ExprPtr const& expr, std::shared_ptr<Env> const& env)
 // FIXME
 inline auto expandMacros(ExprPtr const& expr, std::shared_ptr<Env> const& env) -> ExprPtr
 {
-    if (isMacroCall(expr, env))
+    if (auto e = tryMacroCall(expr, env))
     {
-        return parse(expr)->eval(env);
+        return e;
     }
     if (auto c = dynamic_cast<Cons const*>(expr.get()))
     {
