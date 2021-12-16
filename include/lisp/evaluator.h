@@ -7,6 +7,7 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#include <algorithm>
 
 class Expr;
 using ExprPtr = std::shared_ptr<Expr>;
@@ -633,10 +634,6 @@ public:
     : mOperator{op}
     , mOperands{params}
     {}
-    // bool isMacroCall() const
-    // {
-    //     return dynamic_cast<MacroProcedure const*>(mOperator.get());
-    // }
     ExprPtr eval(std::shared_ptr<Env> const& env) override
     {
         auto op = mOperator->eval(env);
