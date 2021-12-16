@@ -19,12 +19,6 @@ ExprPtr nil()
     return n;
 }
 
-ExprPtr LambdaBase::eval(std::shared_ptr<Env> const& env)
-{
-    CompoundProcedure proc{mBody, mParameters, mVariadic, env};
-    return std::shared_ptr<Expr>(new CompoundProcedure(proc));
-}
-
 ExprPtr Definition::eval(std::shared_ptr<Env> const& env)
 {
     return env->defineVariable(mVariableName, mValue->eval(env));
@@ -33,4 +27,18 @@ ExprPtr Definition::eval(std::shared_ptr<Env> const& env)
 bool Definition::isMacroDefinition() const
 {
     return dynamic_cast<Macro const*>(mValue.get());
+}
+
+ExprPtr MacroProcedure::apply(std::vector<std::shared_ptr<Expr> > const &args)
+{
+    auto result = CompoundProcedureBase::apply(args);
+    return transform(result, [](ExprPtr const& expr)
+        {
+            if (auto s = dynamic_cast<Symbol const*>(expr.get()))
+            {
+                return ExprPtr{new RawWord{s->get()}};
+            }
+            return expr;
+        }
+    );
 }

@@ -4,20 +4,20 @@
 #include <string>
 #include <sstream>
 #include <iostream>
-#include "lisp/meta.h"
+#include "lisp/evaluator.h"
 #include "lisp/lexer.h"
 #include <cctype>
 
-inline auto vecToMCons(std::vector<MExprPtr> const& vec)
+inline auto vecToCons(std::vector<ExprPtr> const& vec)
 {
-    auto result = MNil::instance();
+    auto result = nil();
     auto vecSize = vec.size();
     auto i = vec.rbegin();
     if (vecSize >= 2)
     {
         auto dot = vec.at(vecSize - 2);
-        auto dotPtr = dynamic_cast<MAtomic*>(dot.get());
-        if (dotPtr != nullptr && dotPtr->get() == ".")
+        auto dotPtr = dynamic_cast<RawWord*>(dot.get());
+        if (dotPtr != nullptr && dotPtr->toString() == ".")
         {
             ASSERT(vecSize >=3);
             ++i;
@@ -27,7 +27,7 @@ inline auto vecToMCons(std::vector<MExprPtr> const& vec)
     }
     for (;i != vec.rend(); ++i)
     {
-        result = MExprPtr{new MCons{*i, result}};
+        result = ExprPtr{new Cons{*i, result}};
     }
     return result;
 }
@@ -72,17 +72,33 @@ public:
         return mLookAhead.type == TokenType::kEOF;
     }
 
-    MExprPtr atomic()
+    auto parseAtomic(std::string const& str) -> ExprPtr
+    {
+        auto c = str.front();
+        if (isdigit(c) || (str.size() > 1 && c == '-'))
+        {
+            double num = std::stod(str);
+            return ExprPtr{new Number(num)};
+        }
+        if (c == '"')
+        {
+            auto substr = str.substr(1U, str.size() - 2U);
+            return ExprPtr{new String(substr)};
+        }
+        return ExprPtr{new RawWord(str)};
+    }
+
+    ExprPtr atomic()
     {
         if (mLookAhead.type != TokenType::kWORD)
         {
             throw std::runtime_error(mLookAhead.text);
         }
-        auto result = MExprPtr{new MAtomic(mLookAhead.text)};
+        auto result = parseAtomic(mLookAhead.text);
         consume();
         return result;
     }
-    MExprPtr parenthesized()
+    ExprPtr parenthesized()
     {
         ASSERT(match(TokenType::kL_PAREN));
         auto result =  cons();
@@ -90,31 +106,31 @@ public:
         ASSERT(match(TokenType::kR_PAREN));
         return result;
     }
-    MExprPtr cons()
+    ExprPtr cons()
     {
-        std::vector<MExprPtr> actions;
+        std::vector<ExprPtr> actions;
         while (mLookAhead.type != TokenType::kR_PAREN)
         {
             actions.push_back(sexpr());
         }
-        return vecToMCons(actions);
+        return vecToCons(actions);
     }
-    MExprPtr sexpr()
+    ExprPtr sexpr()
     {
         if (mLookAhead.type == TokenType::kQUOTE)
         {
             consume();
-            return vecToMCons({MExprPtr{new MAtomic{"quote"}}, sexpr()});
+            return vecToCons({ExprPtr{new RawWord{"quote"}}, sexpr()});
         }
         if (mLookAhead.type == TokenType::kQUASI_QUOTE)
         {
             consume();
-            return vecToMCons({MExprPtr{new MAtomic{"quasiquote"}}, sexpr()});
+            return vecToCons({ExprPtr{new RawWord{"quasiquote"}}, sexpr()});
         }
         if (mLookAhead.type == TokenType::kUNQUOTE)
         {
             consume();
-            return vecToMCons({MExprPtr{new MAtomic{"unquote"}}, sexpr()});
+            return vecToCons({ExprPtr{new RawWord{"unquote"}}, sexpr()});
         }
         if (mLookAhead.type == TokenType::kL_PAREN)
         {
@@ -126,5 +142,6 @@ private:
     Lexer mInput;
     Token mLookAhead;
 };
+
 
 #endif // LISP_META_PARSER_H
