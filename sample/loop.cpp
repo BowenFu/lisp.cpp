@@ -1,6 +1,9 @@
 #include "lisp/evaluator.h"
 #include "lisp/parser.h"
 #include <numeric>
+#include <fstream>
+#include <filesystem>
+namespace fs = std::filesystem;
 
 #define DEBUG 0
 
@@ -164,21 +167,14 @@ auto eval(std::string const& input, std::shared_ptr<Env> const& env)
 
 void preEval()
 {
-    auto defAtom = "(define atom?"
-                        "(lambda (x) "
-                        "(and (not (pair? x)) (not (null? x)))))";
-    eval(defAtom ,globalEnvironment());
-    auto defNot = "(define not"
-                        "(lambda (x) "
-                        "(if x false true)))";
-    eval(defNot ,globalEnvironment());
-    auto defSub = "(define"
-                        "(- . lst) "
-                            "(cond"
-                                "((null? (cdr lst)) (* -1 (car lst)))"
-                                "(else (+ (car lst) (* -1 (car (cdr lst)))))"
-                            "))";
-    eval(defSub ,globalEnvironment());
+    auto const path1 = "core.lisp";
+    auto const path2 = std::string("../../") + path1;
+    auto const path = fs::exists(path1) ? path1 : path2;
+    std::ifstream ifs(path);
+    std::string content((std::istreambuf_iterator<char>(ifs)),
+                        (std::istreambuf_iterator<char>()));
+    auto output = eval(content, globalEnvironment());
+    (void)output;
 }
 
 #if defined(__clang__)
@@ -203,6 +199,18 @@ void driverLoop()
 #pragma clang diagnostic pop
 #endif
 
+bool hasEnding(std::string const &fullString, std::string const &ending)
+{
+    if (fullString.length() >= ending.length())
+    {
+        return (0 == fullString.compare(fullString.length() - ending.length(), ending.length(), ending));
+    }
+    else
+    {
+        return false;
+    }
+}
+
 int32_t main(int n, char** args)
 {
     preEval();
@@ -213,7 +221,14 @@ int32_t main(int n, char** args)
     else
     {
         ASSERT(n == 2);
-        auto input = args[1];
+        std::string input = args[1];
+        if (hasEnding(input, ".lisp"))
+        {
+            std::ifstream ifs(input);
+            std::string content((std::istreambuf_iterator<char>(ifs)),
+                                (std::istreambuf_iterator<char>()));
+            input = std::move(content);
+        }
         auto output = eval(input, globalEnvironment());
         std::cout << output << std::endl;
     }
