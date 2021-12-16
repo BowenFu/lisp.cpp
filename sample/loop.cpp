@@ -2,6 +2,8 @@
 #include "lisp/parser.h"
 #include <numeric>
 #include <fstream>
+#include <filesystem>
+namespace fs = std::filesystem;
 
 #define DEBUG 0
 
@@ -165,7 +167,10 @@ auto eval(std::string const& input, std::shared_ptr<Env> const& env)
 
 void preEval()
 {
-    std::ifstream ifs(input);
+    auto const path1 = "core.lisp";
+    auto const path2 = std::string("../../") + path1;
+    auto const path = fs::exists(path1) ? path1 : path2;
+    std::ifstream ifs(path);
     std::string content((std::istreambuf_iterator<char>(ifs)),
                         (std::istreambuf_iterator<char>()));
     auto output = eval(content, globalEnvironment());
