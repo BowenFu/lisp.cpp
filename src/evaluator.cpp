@@ -24,10 +24,6 @@ ExprPtr Definition::eval(std::shared_ptr<Env> const& env)
     return env->defineVariable(mVariableName, mValue->eval(env));
 }
 
-bool Definition::isMacroDefinition() const
-{
-    return dynamic_cast<Macro const*>(mValue.get());
-}
 
 ExprPtr MacroProcedure::apply(std::vector<std::shared_ptr<Expr> > const &args)
 {

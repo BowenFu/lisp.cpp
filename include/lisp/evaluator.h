@@ -295,7 +295,7 @@ public:
 };
 
 // For meta parser only
-class RawWord final : public Expr, public std::enable_shared_from_this<RawWord>
+class RawWord final : public Expr
 {
     std::string mInternal;
 public:
@@ -305,7 +305,7 @@ public:
     }
     ExprPtr eval(std::shared_ptr<Env> const& /* env */) override
     {
-        return shared_from_this();
+        FAIL("RawWord should never be evaluated!");
     }
     std::string toString() const override
     {
@@ -349,7 +349,6 @@ public:
     , mValue{value}
     {
     }
-    bool isMacroDefinition() const;
     ExprPtr eval(std::shared_ptr<Env> const& env) override;
     std::string toString() const override
     {

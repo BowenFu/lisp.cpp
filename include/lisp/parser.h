@@ -458,10 +458,6 @@ inline auto expandMacros(ExprPtr const& expr, std::shared_ptr<Env> const& env) -
     }
     if (auto c = dynamic_cast<Cons const*>(expr.get()))
     {
-        if (c->car()->toString() == "define")
-        {
-            return expr;
-        }
         return ExprPtr{new Cons{expandMacros(c->car(), env), expandMacros(c->cdr(), env)}};
     }
     return expr;
