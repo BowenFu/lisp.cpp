@@ -147,12 +147,13 @@ auto eval(std::string const& input, std::shared_ptr<Env> const& env)
     Lexer lex(input);
     MetaParser p(lex);
     std::string result;
-    auto macroEnv = std::make_shared<Env>();
+    // auto macroEnv = std::make_shared<Env>();
+    auto macroEnv = env;
     do
     {
         auto me = p.sexpr();
-        defineMacros(me, macroEnv);
-        auto ee = expandMacros(me, macroEnv);
+        auto de = defineMacros(me, macroEnv);
+        auto ee = expandMacros(de, macroEnv);
 #if DEBUG
         std::cout << "ee ## " << ee->toString() << std::endl; 
 #endif // DEBUG

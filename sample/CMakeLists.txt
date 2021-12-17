@@ -136,3 +136,6 @@ do_test(test_macro_double "(define double (macro (x) `(* ,x 2))) (double (+ 1 1)
 
 do_test(test_macro_show "(define show (macro (x) `(list ',x))) (show (+ 1 1))" "\\\\(\\\\'\\\\+ 1 1\\\\)")
 do_test(test_macro_first "(define first (macro (x) `(car ',x))) (first (+ 1 1))" "'+")
+do_test(test_macro_first "(define rest (macro (x) `(cdr ',x))) (rest (+ 1 1))" "(1 1)")
+
+do_test(test_macro_first "(define replaceOp (macro (orig op) `(,op . ,(cdr orig)))) (replaceOp (+ 3 3) *)" "9")
