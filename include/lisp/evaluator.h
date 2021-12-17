@@ -56,7 +56,7 @@ public:
         auto iter = mFrame.find(variableName);
         if (iter == mFrame.end())
         {
-            throw std::runtime_error{"call setVariableValue to undefined variables."};
+            throw std::runtime_error{"call setVariableValue to undefined variables." + variableName};
         }
         iter->second = value;
         return value;
@@ -73,7 +73,7 @@ public:
     {
         if (mFrame.count(variableName))
         {
-            throw std::runtime_error{"call defineVariable to defined variables."};
+            throw std::runtime_error{"call defineVariable to defined variables." + variableName};
         }
         mFrame.insert({variableName, value});
         return value;

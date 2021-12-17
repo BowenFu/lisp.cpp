@@ -230,11 +230,16 @@ inline ExprPtr application(ExprPtr const& car, ExprPtr const& cdr)
     return ExprPtr{new Application(op, params)};
 }
 
-inline ExprPtr macroApplication(ExprPtr const& car, ExprPtr const& cdr)
+inline ExprPtr tryMacroApplication(ExprPtr const& car, ExprPtr const& cdr, std::shared_ptr<Env> const& env)
 {
     auto op = parse(car);
-    std::vector<ExprPtr> params = consToVec(cdr);
-    return ExprPtr{new Application(op, params)};
+    auto evaledOp = op->eval(env);
+    if (dynamic_cast<MacroProcedure const*>(evaledOp.get()))
+    {
+        std::vector<ExprPtr> params = consToVec(cdr);
+        return Application(evaledOp, params).eval(env);
+    }
+    return ExprPtr{new Cons{car, cdr}};
 }
 
 inline ExprPtr application(ExprPtr const& expr)
@@ -359,7 +364,7 @@ inline auto tryMacroCall(ExprPtr const& expr, std::shared_ptr<Env> const& env) -
     }
     if (env->variableDefined(carStr.value()))
     {
-        return macroApplication(car, cdr)->eval(env);
+        return tryMacroApplication(car, cdr, env);
     }
     return expr;
 }
@@ -472,16 +477,18 @@ void forEach(ExprPtr const& expr, Func func)
     func(expr);
 }
 
-inline void defineMacros(ExprPtr const& expr, std::shared_ptr<Env> const& env)
+inline auto defineMacros(ExprPtr const& expr, std::shared_ptr<Env> const& env) -> ExprPtr
 {
     auto func = [&env](auto const& expr)
     {
         if (auto macroDefinition = parseMacroDefinition(expr))
         {
             macroDefinition->eval(env);
+            return nil();
         }
+        return expr;
     };
-    forEach(expr, func);
+    return transform(expr, func);
 }
 
 // FIXME
