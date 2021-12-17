@@ -100,7 +100,7 @@ auto setUpEnvironment()
     auto emptyEnv = std::make_shared<Env>();
     auto primitiveProcedureNames = std::vector<std::string>{};
     auto primitiveProcedureObjects = std::vector<ExprPtr>{};
-    auto initialEnv = emptyEnv->extend(primitiveProcedureNames, primitiveProcedureObjects);
+    auto initialEnv = emptyEnv->extend(Params{std::make_pair(primitiveProcedureNames, false)}, primitiveProcedureObjects);
 
     initialEnv->defineVariable("cons", ExprPtr{new PrimitiveProcedure{consOp}});
     initialEnv->defineVariable("car", ExprPtr{new PrimitiveProcedure{carOp}});
