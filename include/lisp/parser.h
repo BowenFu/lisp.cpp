@@ -39,11 +39,14 @@ inline std::optional<std::string> asString(ExprPtr const& expr)
     return {};
 }
 
-// bool : variadic
-inline std::pair<std::vector<std::string>, bool> parseParams(ExprPtr const& expr)
+inline Params parseParams(ExprPtr const& expr)
 {
     std::vector<std::string> params;
     auto me = expr;
+    if (auto e = dynamic_cast<RawWord*>(me.get()))
+    {
+        return e->get();
+    }
     while (me != nil())
     {
         auto cons = dynamic_cast<Cons*>(me.get());
@@ -52,14 +55,14 @@ inline std::pair<std::vector<std::string>, bool> parseParams(ExprPtr const& expr
             auto opStr = asString(me);
             ASSERT(opStr.has_value());
             params.push_back(opStr.value());
-            return {params, true};
+            return std::make_pair(params, true);
         }
         auto opStr = asString(cons->car());
         ASSERT(opStr.has_value());
         params.push_back(opStr.value());
         me = cons->cdr();
     }
-    return {params, false};
+    return std::make_pair(params, false);
 }
 
 inline ExprPtr listBack(ExprPtr const& expr)
@@ -145,7 +148,7 @@ inline ExprPtr definition(ExprPtr const& expr)
         ASSERT(opStr.has_value());
         auto params = parseParams(carD);
         auto body = sequence(cdr);
-        auto proc = ExprPtr{new Lambda(params.first, params.second, body)};
+        auto proc = ExprPtr{new Lambda(params, body)};
         return ExprPtr{new Definition(opStr.value(), proc)};
     }
     // normal definition
@@ -167,7 +170,7 @@ inline ExprPtr lambdaBase(ExprPtr const& expr)
     auto [car, cdr] = deCons(expr);
     auto params = parseParams(car);
     auto body = sequence(cdr);
-    return ExprPtr{new LambdaT(params.first, params.second, body)};
+    return ExprPtr{new LambdaT(params, body)};
 }
 
 inline ExprPtr lambda(ExprPtr const& expr)
