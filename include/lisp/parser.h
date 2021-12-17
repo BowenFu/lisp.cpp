@@ -369,28 +369,6 @@ inline auto tryMacroCall(ExprPtr const& expr, std::shared_ptr<Env> const& env) -
     return expr;
 }
 
-inline auto parseAndEvalMacroCall(ExprPtr const& expr, std::shared_ptr<Env> const& env) -> ExprPtr
-{
-    auto cons = dynamic_cast<Cons*>(expr.get());
-    if (!cons)
-    {
-        return expr;
-    }
-    auto car = cons->car();
-    auto cdr = cons->cdr();
-    auto carStr = asString(car);
-    if (!carStr.has_value())
-    {
-        // do nothing
-        return expr;
-    }
-    if (env->variableDefined(carStr.value()))
-    {
-        return parse(expr)->eval(env);
-    }
-    return expr;
-}
-
 inline auto parse(ExprPtr const& expr) -> ExprPtr
 {
     if (auto e = tryCons(expr))
@@ -466,34 +444,14 @@ inline auto parseAsQuoted(ExprPtr const& expr, std::optional<int32_t> quasiquote
     return consToQuoted(expr, quasiquoteLevel);
 }
 
-template <typename Func>
-void forEach(ExprPtr const& expr, Func func)
-{
-    if (auto e = dynamic_cast<Cons const*>(expr.get()))
-    {
-        forEach(e->car(), func);
-        forEach(e->cdr(), func);
-    }
-    func(expr);
-}
-
-inline auto defineMacros(ExprPtr const& expr, std::shared_ptr<Env> const& env) -> ExprPtr
-{
-    auto func = [&env](auto const& expr)
-    {
-        if (auto macroDefinition = parseMacroDefinition(expr))
-        {
-            macroDefinition->eval(env);
-            return nil();
-        }
-        return expr;
-    };
-    return transform(expr, func);
-}
-
 // FIXME
 inline auto expandMacros(ExprPtr const& expr, std::shared_ptr<Env> const& env) -> ExprPtr
 {
+    if (auto macroDefinition = parseMacroDefinition(expr))
+    {
+        macroDefinition->eval(env);
+        return nil();
+    }
     if (auto e = tryMacroCall(expr, env))
     {
         return e;
