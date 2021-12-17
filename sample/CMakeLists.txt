@@ -139,3 +139,6 @@ do_test(test_macro_first "(define first (macro (x) `(car ',x))) (first (+ 1 1))"
 do_test(test_macro_first "(define rest (macro (x) `(cdr ',x))) (rest (+ 1 1))" "(1 1)")
 
 do_test(test_macro_first "(define replaceOp (macro (orig op) `(,op . ,(cdr orig)))) (replaceOp (+ 3 3) *)" "9")
+
+do_test(test_bind_to_param_list "(define mylist (lambda x x)) (mylist 1 2 3)" "\\\\(1 2 3\\\\)")
+do_test(test_cons_pred "cons? (cons? (cons 1 2))" "true")
