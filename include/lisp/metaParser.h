@@ -117,24 +117,24 @@ public:
     }
     ExprPtr sexpr()
     {
-        if (mLookAhead.type == TokenType::kQUOTE)
+        switch (mLookAhead.type)
         {
+        case TokenType::kQUOTE:
             consume();
             return vecToCons({ExprPtr{new RawWord{"quote"}}, sexpr()});
-        }
-        if (mLookAhead.type == TokenType::kQUASI_QUOTE)
-        {
+        case TokenType::kQUASI_QUOTE:
             consume();
             return vecToCons({ExprPtr{new RawWord{"quasiquote"}}, sexpr()});
-        }
-        if (mLookAhead.type == TokenType::kUNQUOTE)
-        {
+        case TokenType::kUNQUOTE:
             consume();
             return vecToCons({ExprPtr{new RawWord{"unquote"}}, sexpr()});
-        }
-        if (mLookAhead.type == TokenType::kL_PAREN)
-        {
+        case TokenType::kUNQUOTE_SPLICING:
+            consume();
+            return vecToCons({ExprPtr{new RawWord{"unquote-splicing"}}, sexpr()});
+        case TokenType::kL_PAREN:
             return parenthesized();
+        default:
+            break;
         }
         return atomic();
     }

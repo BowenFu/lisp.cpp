@@ -21,7 +21,7 @@ class Variable;
 using Params = std::variant<std::string, std::pair<std::vector<std::string>, bool>>;
 
 template <typename Iter>
-ExprPtr vecToCons(Iter begin, Iter end);
+ExprPtr reverseVecToCons(Iter begin, Iter end);
 
 class Env
 {
@@ -87,7 +87,7 @@ public:
         std::map<std::string, ExprPtr> frame;
         if (auto s = std::get_if<std::string>(&parameters))
         {
-            frame.insert({*s, vecToCons(arguments.rbegin(), arguments.rend())});
+            frame.insert({*s, reverseVecToCons(arguments.rbegin(), arguments.rend())});
         }
         else
         {
@@ -111,7 +111,7 @@ public:
                 }
                 if (variadic)
                 {
-                    frame.insert({params.back(), vecToCons(arguments.rbegin(), arguments.rend() - static_cast<long>(params.size()) + 1)});
+                    frame.insert({params.back(), reverseVecToCons(arguments.rbegin(), arguments.rend() - static_cast<long>(params.size()) + 1)});
                 }
                 else
                 {
@@ -256,7 +256,7 @@ public:
 };
 
 template <typename Iter>
-ExprPtr vecToCons(Iter begin, Iter end)
+ExprPtr reverseVecToCons(Iter begin, Iter end)
 {
     auto result = nil();
     for (auto i = begin; i != end; ++i)

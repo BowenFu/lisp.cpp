@@ -420,11 +420,16 @@ inline auto consToQuoted(ExprPtr const& expr, std::optional<int32_t> quasiquoteL
     auto carStr = car->toString();
     if (quasiquoteLevel)
     {
-        if (carStr == "unquote")
+        if (carStr == "unquote" || carStr == "unquote-splicing")
         {
             if ( quasiquoteLevel.value() == 1)
             {
-                return unquote(cdr);
+                auto result = unquote(cdr);
+                if (carStr == "unquote")
+                {
+                    return result;
+                }
+                return result;
             }
             --(*quasiquoteLevel);
         }

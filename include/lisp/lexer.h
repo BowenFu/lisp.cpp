@@ -14,6 +14,7 @@ enum class TokenType
     kQUOTE,
     kQUASI_QUOTE,
     kUNQUOTE,
+    kUNQUOTE_SPLICING,
     kWORD,
     kEOF
 };
@@ -50,11 +51,15 @@ public:
     {
         ++mPos;
     }
+    auto currentChar()
+    {
+        return mInput.at(mPos);
+    }
     Token nextToken()
     {
         while (mPos < mInput.size())
         {
-            auto c = mInput.at(mPos);
+            auto c = currentChar();
             if (c == '"')
             {
                 return stringToken();
@@ -80,6 +85,11 @@ public:
                 return Token{TokenType::kQUASI_QUOTE, std::string{c}};
             case ',':
                 consume();
+                if (currentChar() == '@')
+                {
+                    consume();
+                    return Token{TokenType::kUNQUOTE_SPLICING, std::string{",@"}};
+                }
                 return Token{TokenType::kUNQUOTE, std::string{c}};
             default:
                 return wordToken();
@@ -92,7 +102,7 @@ public:
         std::ostringstream word{};
         while (mPos < mInput.size())
         {
-            auto c = mInput.at(mPos);
+            auto c = currentChar();
             if(isWS(c) || elem(c, {'(', ')'}))
             {
                 break;
@@ -109,7 +119,7 @@ public:
     }
     Token stringToken()
     {
-        ASSERT(mInput.at(mPos) == '"');
+        ASSERT(currentChar() == '"');
         size_t begin = mPos;
         auto const endIter = std::find(mInput.begin() + static_cast<long>(mPos) + 1U, mInput.end(), '"');
         ASSERT(endIter != mInput.end());
