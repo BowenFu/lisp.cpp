@@ -72,19 +72,6 @@ inline ExprPtr listBack(ExprPtr const& expr)
     return car;
 }
 
-inline std::vector<ExprPtr> consToVec(ExprPtr const& expr)
-{
-    std::vector<ExprPtr> vec;
-    auto me = expr;
-    while (me != nil())
-    {
-        auto [car, cdr] = deCons(me);
-        vec.push_back(car);
-        me = cdr;
-    }
-    return vec;
-}
-
 inline std::vector<ExprPtr> parseActions(ExprPtr const& expr)
 {
     std::vector<ExprPtr> actions;
@@ -420,11 +407,16 @@ inline auto consToQuoted(ExprPtr const& expr, std::optional<int32_t> quasiquoteL
     auto carStr = car->toString();
     if (quasiquoteLevel)
     {
-        if (carStr == "unquote")
+        if (carStr == "unquote" || carStr == "unquote-splicing")
         {
             if ( quasiquoteLevel.value() == 1)
             {
-                return unquote(cdr);
+                auto result = unquote(cdr);
+                if (carStr == "unquote")
+                {
+                    return result;
+                }
+                return ExprPtr{new Splicing{result}};
             }
             --(*quasiquoteLevel);
         }

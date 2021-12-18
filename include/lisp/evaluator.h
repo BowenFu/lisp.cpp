@@ -21,7 +21,10 @@ class Variable;
 using Params = std::variant<std::string, std::pair<std::vector<std::string>, bool>>;
 
 template <typename Iter>
-ExprPtr vecToCons(Iter begin, Iter end);
+ExprPtr reverseVecToCons(Iter begin, Iter end);
+
+ExprPtr vecToCons(std::vector<ExprPtr> const& vec);
+std::vector<ExprPtr> consToVec(ExprPtr const& expr);
 
 class Env
 {
@@ -87,7 +90,7 @@ public:
         std::map<std::string, ExprPtr> frame;
         if (auto s = std::get_if<std::string>(&parameters))
         {
-            frame.insert({*s, vecToCons(arguments.rbegin(), arguments.rend())});
+            frame.insert({*s, reverseVecToCons(arguments.rbegin(), arguments.rend())});
         }
         else
         {
@@ -111,7 +114,7 @@ public:
                 }
                 if (variadic)
                 {
-                    frame.insert({params.back(), vecToCons(arguments.rbegin(), arguments.rend() - static_cast<long>(params.size()) + 1)});
+                    frame.insert({params.back(), reverseVecToCons(arguments.rbegin(), arguments.rend() - static_cast<long>(params.size()) + 1)});
                 }
                 else
                 {
@@ -183,110 +186,6 @@ inline std::string Literal<std::string>::toString() const
 ExprPtr true_();
 ExprPtr false_();
 
-ExprPtr nil();
-
-class Nil final: public Expr
-{
-public:
-    Nil() = default;
-    ExprPtr eval(std::shared_ptr<Env> const& /* env */) override
-    {
-        return nil();
-    }
-    std::string toString() const override
-    {
-        return "()";
-    }
-    bool equalTo(ExprPtr const& other) const override
-    {
-        return this == other.get();
-    }
-};
-
-class Cons final: public Expr
-{
-    ExprPtr mCar;
-    ExprPtr mCdr;
-public:
-    Cons(ExprPtr const& car_, ExprPtr const& cdr_)
-    : mCar{car_}
-    , mCdr{cdr_}
-    {}
-    ExprPtr eval(std::shared_ptr<Env> const& env) override
-    {
-        return ExprPtr{new Cons{mCar->eval(env), mCdr->eval(env)}};
-    }
-    std::string toString() const override
-    {
-        std::ostringstream o;
-        o << "(" << mCar->toString();
-        if (dynamic_cast<Cons*>(mCdr.get()))
-        {
-            auto cdrStr = mCdr->toString();
-            auto cdrStrSize = cdrStr.size();
-            o << " " << cdrStr.substr(1U, cdrStrSize - 2);
-        }
-        else if (mCdr == nil())
-        {
-        }
-        else
-        {
-            o << " . " << mCdr->toString();
-        }
-        o << ")";
-        return o.str();
-    }
-    auto car() const
-    {
-        return mCar;
-    }
-    auto cdr() const
-    {
-        return mCdr;
-    }
-    bool equalTo(ExprPtr const& other) const override
-    {
-        auto theOther = dynamic_cast<Cons*>(other.get());
-        if (theOther)
-        {
-            return car()->equalTo(theOther->car()) && cdr()->equalTo(theOther->cdr());
-        }
-        return false;
-    }
-};
-
-template <typename Iter>
-ExprPtr vecToCons(Iter begin, Iter end)
-{
-    auto result = nil();
-    for (auto i = begin; i != end; ++i)
-    {
-        result = ExprPtr{new Cons{*i, result}};
-    }
-    return result;
-}
-
-class Variable final : public Expr
-{
-    std::string mName;
-public:
-    Variable(std::string const& name)
-    : mName{name}
-    {}
-    ExprPtr eval(std::shared_ptr<Env> const& env) override
-    {
-        return env->lookupVariableValue(mName);
-    }
-    std::string name() const
-    {
-        return mName;
-    }
-    std::string toString() const override
-    {
-        return mName;
-    }
-};
-
 class Symbol final : public Expr, public std::enable_shared_from_this<Symbol>
 {
     std::string mInternal;
@@ -329,6 +228,138 @@ public:
     std::string get() const
     {
         return mInternal;
+    }
+};
+
+ExprPtr nil();
+
+class Nil final: public Expr
+{
+public:
+    Nil() = default;
+    ExprPtr eval(std::shared_ptr<Env> const& /* env */) override
+    {
+        return nil();
+    }
+    std::string toString() const override
+    {
+        return "()";
+    }
+    bool equalTo(ExprPtr const& other) const override
+    {
+        return this == other.get();
+    }
+};
+
+class Splicing final: public Expr
+{
+    ExprPtr mInternal;
+public:
+    explicit Splicing(ExprPtr const& expr)
+    : mInternal{expr}
+    {}
+    ExprPtr eval(std::shared_ptr<Env> const& env) override
+    {
+        return ExprPtr{new Splicing{mInternal->eval(env)}};
+    }
+    std::string toString() const override
+    {
+        return "(Splicing: " + mInternal->toString() + ")";
+    }
+    auto get() const
+    {
+        return mInternal;
+    }
+};
+
+class Cons final: public Expr
+{
+    ExprPtr mCar;
+    ExprPtr mCdr;
+public:
+    Cons(ExprPtr const& car_, ExprPtr const& cdr_)
+    : mCar{car_}
+    , mCdr{cdr_}
+    {}
+    ExprPtr eval(std::shared_ptr<Env> const& env) override
+    {
+        if (auto car = dynamic_cast<Splicing const*>(mCar.get()))
+        {
+            auto vec = consToVec(car->get()->eval(env)); 
+            vec.push_back(ExprPtr{new RawWord(".")});
+            vec.push_back(mCdr->eval(env));
+            return vecToCons(vec);
+        }
+        return ExprPtr{new Cons{mCar->eval(env), mCdr->eval(env)}};
+    }
+    std::string toString() const override
+    {
+        std::ostringstream o;
+        o << "(" << mCar->toString();
+        if (dynamic_cast<Cons*>(mCdr.get()))
+        {
+            auto cdrStr = mCdr->toString();
+            auto cdrStrSize = cdrStr.size();
+            o << " " << cdrStr.substr(1U, cdrStrSize - 2);
+        }
+        else if (mCdr == nil())
+        {
+        }
+        else
+        {
+            o << " . " << mCdr->toString();
+        }
+        o << ")";
+        return o.str();
+    }
+    auto car() const
+    {
+        return mCar;
+    }
+    auto cdr() const
+    {
+        return mCdr;
+    }
+    bool equalTo(ExprPtr const& other) const override
+    {
+        auto theOther = dynamic_cast<Cons*>(other.get());
+        if (theOther)
+        {
+            return car()->equalTo(theOther->car()) && cdr()->equalTo(theOther->cdr());
+        }
+        return false;
+    }
+};
+
+template <typename Iter>
+ExprPtr reverseVecToCons(Iter begin, Iter end)
+{
+    auto result = nil();
+    for (auto i = begin; i != end; ++i)
+    {
+        result = ExprPtr{new Cons{*i, result}};
+    }
+    return result;
+}
+
+class Variable final : public Expr
+{
+    std::string mName;
+public:
+    Variable(std::string const& name)
+    : mName{name}
+    {}
+    ExprPtr eval(std::shared_ptr<Env> const& env) override
+    {
+        return env->lookupVariableValue(mName);
+    }
+    std::string name() const
+    {
+        return mName;
+    }
+    std::string toString() const override
+    {
+        return mName;
     }
 };
 
