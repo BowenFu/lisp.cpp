@@ -512,23 +512,3 @@ TEST(Parser, begin2)
     }
     EXPECT_TRUE(p.eof());
 }
-
-TEST(Parser, andor)
-{
-    std::initializer_list<std::pair<std::string, std::string> > expected = {{"Or", "true"}};
-
-    Lexer lex("(or 1 2 (and 3) #t)");
-    MetaParser p(lex);
-    
-    auto env = std::make_shared<Env>();
-    env->defineVariable("#t", true_());
-
-    for (auto s : expected)
-    {
-        auto me = p.sexpr();
-        auto e = parse(me);
-        EXPECT_EQ(e->toString(), s.first);
-        EXPECT_EQ(e->eval(env)->toString(), s.second);
-    }
-    EXPECT_TRUE(p.eof());
-}

@@ -90,16 +90,6 @@ inline std::shared_ptr<Sequence> sequence(ExprPtr const& expr)
     return std::make_shared<Sequence>(parseActions(expr));
 }
 
-inline ExprPtr and_(ExprPtr const& expr)
-{
-    return std::make_shared<And>(parseActions(expr));
-}
-
-inline ExprPtr or_(ExprPtr const& expr)
-{
-    return std::make_shared<Or>(parseActions(expr));
-}
-
 inline auto parseAsQuoted(ExprPtr const& expr, std::optional<int32_t> quasiquoteLevel) -> ExprPtr;
 
 inline ExprPtr assertIsLastAndGet(ExprPtr const& expr)
@@ -271,8 +261,6 @@ inline auto tryCons(ExprPtr const& expr) -> ExprPtr
     keywordToHandler["if"] = if_;
     keywordToHandler["cond"] = cond;
     keywordToHandler["begin"] = [](auto cdr){ return std::static_pointer_cast<Expr>(sequence(cdr));};
-    keywordToHandler["and"] = and_;
-    keywordToHandler["or"] = or_;
     keywordToHandler["quote"] = quote;
     keywordToHandler["quasiquote"] = quasiquote;
     keywordToHandler["_"] = [car](auto cdr){ return application(car, cdr); };

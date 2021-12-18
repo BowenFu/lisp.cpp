@@ -36,12 +36,6 @@ do_test(test_define_proc "(define (x) 2) (x)" 2)
 do_test(test_cond1 "(define x #t) (cond (x 1) (else 2))" 1)
 do_test(test_cond2 "(define x #f) (cond (x 1) (else 2))" 2)
 
-do_test(test_cond3
-"
-(define lat?  (lambda (l) (cond ((null? l) #t) ((atom? (car l)) (lat? (cdr l))) (else #f)))) (lat? (list 1 2 (list 3)))
-"
-false)
-
 do_test(test_string1
 "
 (define member?
@@ -153,3 +147,15 @@ do_test(test_unquote-splicing-nested "`(1 ```,,@,,@(list (+ 1 2)) 4)" "\\\\(1 \\
 
 do_test(test_unquote-splicing "(let ((x '(1))) `(,@x 1))" "\\\\(1 1\\\\)")
 do_test(test_unquote-splicing2 "`(1 2 ,@(list (+ 1 2) (- 5 1)) 5)" "\\\\(1 2 3 4 5\\\\)")
+
+do_test(test_and_1 "(and)" "true")
+do_test(test_and_2 "(and 1)" "1")
+do_test(test_and_3 "(and 1 \"2\")" "\"2\"")
+do_test(test_and_4 "(and 1 \"2\" 'x)" "\'x")
+do_test(test_and_5 "(and (or 1 \"2\") 'x)" "\'x")
+
+do_test(test_or_1 "(or)" "false")
+do_test(test_or_2 "(or 1)" "1")
+do_test(test_or_3 "(or \"2\" 1)" "\"2\"")
+do_test(test_or_4 "(or 'x \"2\" 1)" "\'x")
+do_test(test_or_5 "(or (and #f 'x) \"2\" 1)" "\'x")

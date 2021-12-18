@@ -451,42 +451,6 @@ public:
     }
 };
 
-class And final : public Expr
-{
-    std::vector<ExprPtr> mActions;
-public:
-    And(std::vector<ExprPtr> actions)
-    : mActions{actions}
-    {}
-    ExprPtr eval(std::shared_ptr<Env> const& env) override
-    {
-        bool const result = std::all_of(mActions.begin(), mActions.end(), [&env](auto& e){ return isTrue(e->eval(env)); });
-        return result ? true_() : false_();
-    }
-    std::string toString() const override
-    {
-        return "And";
-    }
-};
-
-class Or final : public Expr
-{
-    std::vector<ExprPtr> mActions;
-public:
-    Or(std::vector<ExprPtr> actions)
-    : mActions{actions}
-    {}
-    ExprPtr eval(std::shared_ptr<Env> const& env) override
-    {
-        bool const result = std::any_of(mActions.begin(), mActions.end(), [&env](auto& e){ return isTrue(e->eval(env)); });
-        return result ? true_() : false_();
-    }
-    std::string toString() const override
-    {
-        return "Or";
-    }
-};
-
 template <typename ProcedureT>
 class LambdaBase : public Expr
 {
