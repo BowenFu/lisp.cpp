@@ -66,6 +66,48 @@
     )
 )
 
+(define and
+    (macro lst
+        (define (impl ls)
+            (if (null? ls)
+                #t
+                (if (cons? ls)
+                    (if (null? (cdr ls))
+                        (car ls)
+                        `(if ,(car ls)
+                            ,(impl (cdr ls))
+                            #f
+                        )
+                    )
+                    #f
+                )
+            )
+        )
+        (impl lst)
+    )
+)
+
+(define or
+    (macro lst
+        (define (impl ls)
+            (if (null? ls)
+                #f
+                (if (cons? ls)
+                    (if (null? (cdr ls))
+                        (car ls)
+                        `(if ,(car ls)
+                            ,(car ls)
+                            ,(impl (cdr ls))
+                        )
+                    )
+                    #f
+                )
+            )
+        )
+        (impl lst)
+    )
+)
+
 (define mycond
   (macro clauses
     (define (cond-clauses->if lst)
