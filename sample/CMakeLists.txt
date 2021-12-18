@@ -144,3 +144,9 @@ do_test(test_bind_to_param_list "(define mylist (lambda x x)) (mylist 1 2 3)" "\
 do_test(test_cons_pred "cons? (cons? (cons 1 2))" "true")
 do_test(test_list "(list 1 2)" "(1 2)")
 do_test(test_list_star "(list* 1 2)" "(1 . 2)")
+
+do_test(test_let "(let ((x 1)) (+ x 2))" "3")
+
+do_test(test_quasiquote_nested "`(1 `,(+ 1 ,(+ 2 3)) 4)" "\\\\(1 \\\\(\\\\'quasiquote \\\\(\\\\'unquote \\\\(\\\\'\\\\+ 1 5\\\\)\\\\)\\\\) 4\\\\)")
+
+do_test(test_unquote-splicing-nested "`(1 ```,,@,,@(list (+ 1 2)) 4)" "\\\\(1 \\\\(\\\\'quasiquote \\\\(\\\\'quasiquote \\\\(\\\\'quasiquote \\\\(\\\\'unquote \\\\(\\\\'unquote-splicing \\\\(\\\\'unquote 3\\\\)\\\\)\\\\)\\\\)\\\\)\\\\) 4\\\\)")
