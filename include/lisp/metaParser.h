@@ -8,30 +8,6 @@
 #include "lisp/lexer.h"
 #include <cctype>
 
-inline auto vecToCons(std::vector<ExprPtr> const& vec)
-{
-    auto result = nil();
-    auto vecSize = vec.size();
-    auto i = vec.rbegin();
-    if (vecSize >= 2)
-    {
-        auto dot = vec.at(vecSize - 2);
-        auto dotPtr = dynamic_cast<RawWord*>(dot.get());
-        if (dotPtr != nullptr && dotPtr->toString() == ".")
-        {
-            ASSERT(vecSize >=3);
-            ++i;
-            ++i;
-            result = vec.back();
-        }
-    }
-    for (;i != vec.rend(); ++i)
-    {
-        result = ExprPtr{new Cons{*i, result}};
-    }
-    return result;
-}
-
 class MetaParser
 {
 public:

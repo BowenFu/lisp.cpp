@@ -55,7 +55,7 @@
     (define recur (macro (param-argu-pairs-internal)
         (if (cons? param-argu-pairs-internal)
             `((lambda ,(caar param-argu-pairs-internal) ,(recur (cdr param-argu-pairs-internal))) ,(cdar param-argu-pairs-internal))
-            `(begin ,@body)
+            `(begin ,body)
         )
     ))
     (recur param-argu-pairs)

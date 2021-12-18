@@ -23,6 +23,9 @@ using Params = std::variant<std::string, std::pair<std::vector<std::string>, boo
 template <typename Iter>
 ExprPtr reverseVecToCons(Iter begin, Iter end);
 
+ExprPtr vecToCons(std::vector<ExprPtr> const& vec);
+std::vector<ExprPtr> consToVec(ExprPtr const& expr);
+
 class Env
 {
     std::map<std::string, ExprPtr> mFrame;
@@ -183,6 +186,51 @@ inline std::string Literal<std::string>::toString() const
 ExprPtr true_();
 ExprPtr false_();
 
+class Symbol final : public Expr, public std::enable_shared_from_this<Symbol>
+{
+    std::string mInternal;
+public:
+    explicit Symbol(std::string const& name)
+    : mInternal{name}
+    {
+    }
+    ExprPtr eval(std::shared_ptr<Env> const& /* env */) override
+    {
+        return shared_from_this();
+    }
+    std::string toString() const override
+    {
+        return "'" + mInternal;
+    }
+    std::string get() const
+    {
+        return mInternal;
+    }
+};
+
+// For meta parser only
+class RawWord final : public Expr
+{
+    std::string mInternal;
+public:
+    explicit RawWord(std::string const& name)
+    : mInternal{name}
+    {
+    }
+    ExprPtr eval(std::shared_ptr<Env> const& /* env */) override
+    {
+        FAIL("RawWord should never be evaluated!");
+    }
+    std::string toString() const override
+    {
+        return mInternal;
+    }
+    std::string get() const
+    {
+        return mInternal;
+    }
+};
+
 ExprPtr nil();
 
 class Nil final: public Expr
@@ -203,6 +251,27 @@ public:
     }
 };
 
+class Splicing final: public Expr
+{
+    ExprPtr mInternal;
+public:
+    explicit Splicing(ExprPtr const& expr)
+    : mInternal{expr}
+    {}
+    ExprPtr eval(std::shared_ptr<Env> const& env) override
+    {
+        return ExprPtr{new Splicing{mInternal->eval(env)}};
+    }
+    std::string toString() const override
+    {
+        return "(Splicing: " + mInternal->toString() + ")";
+    }
+    auto get() const
+    {
+        return mInternal;
+    }
+};
+
 class Cons final: public Expr
 {
     ExprPtr mCar;
@@ -214,6 +283,13 @@ public:
     {}
     ExprPtr eval(std::shared_ptr<Env> const& env) override
     {
+        if (auto car = dynamic_cast<Splicing const*>(mCar.get()))
+        {
+            auto vec = consToVec(car->get()->eval(env)); 
+            vec.push_back(ExprPtr{new RawWord(".")});
+            vec.push_back(mCdr->eval(env));
+            return vecToCons(vec);
+        }
         return ExprPtr{new Cons{mCar->eval(env), mCdr->eval(env)}};
     }
     std::string toString() const override
@@ -284,51 +360,6 @@ public:
     std::string toString() const override
     {
         return mName;
-    }
-};
-
-class Symbol final : public Expr, public std::enable_shared_from_this<Symbol>
-{
-    std::string mInternal;
-public:
-    explicit Symbol(std::string const& name)
-    : mInternal{name}
-    {
-    }
-    ExprPtr eval(std::shared_ptr<Env> const& /* env */) override
-    {
-        return shared_from_this();
-    }
-    std::string toString() const override
-    {
-        return "'" + mInternal;
-    }
-    std::string get() const
-    {
-        return mInternal;
-    }
-};
-
-// For meta parser only
-class RawWord final : public Expr
-{
-    std::string mInternal;
-public:
-    explicit RawWord(std::string const& name)
-    : mInternal{name}
-    {
-    }
-    ExprPtr eval(std::shared_ptr<Env> const& /* env */) override
-    {
-        FAIL("RawWord should never be evaluated!");
-    }
-    std::string toString() const override
-    {
-        return mInternal;
-    }
-    std::string get() const
-    {
-        return mInternal;
     }
 };
 

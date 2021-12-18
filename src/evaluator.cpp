@@ -38,3 +38,40 @@ ExprPtr MacroProcedure::apply(std::vector<std::shared_ptr<Expr> > const &args)
         }
     );
 }
+
+ExprPtr vecToCons(std::vector<ExprPtr> const& vec)
+{
+    auto result = nil();
+    auto vecSize = vec.size();
+    auto i = vec.rbegin();
+    if (vecSize >= 2)
+    {
+        auto dot = vec.at(vecSize - 2);
+        auto dotPtr = dynamic_cast<RawWord*>(dot.get());
+        if (dotPtr != nullptr && dotPtr->toString() == ".")
+        {
+            ASSERT(vecSize >=3);
+            ++i;
+            ++i;
+            result = vec.back();
+        }
+    }
+    for (;i != vec.rend(); ++i)
+    {
+        result = ExprPtr{new Cons{*i, result}};
+    }
+    return result;
+}
+
+std::vector<ExprPtr> consToVec(ExprPtr const& expr)
+{
+    std::vector<ExprPtr> vec;
+    auto me = expr;
+    while (me != nil())
+    {
+        auto [car, cdr] = deCons(me);
+        vec.push_back(car);
+        me = cdr;
+    }
+    return vec;
+}
