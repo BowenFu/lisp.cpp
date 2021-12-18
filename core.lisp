@@ -47,15 +47,19 @@
     (car (cdr (cdr args)))
 )
 
+(define (cadar args)
+    (car (cdr (car args)))
+)
+
 (define (caadr args)
     (car (car (cdr args)))
 )
 
 (define let (macro (param-argu-pairs body)
-    (define recur (macro (param-argu-pairs-internal)
+    (define recur (lambda (param-argu-pairs-internal)
         (if (cons? param-argu-pairs-internal)
-            `((lambda ,(caar param-argu-pairs-internal) ,(recur (cdr param-argu-pairs-internal))) ,(cdar param-argu-pairs-internal))
-            `(begin ,body)
+            `((lambda (,(caar param-argu-pairs-internal)) ,(recur (cdr param-argu-pairs-internal))) ,(cadar param-argu-pairs-internal))
+            `,body
         )
     ))
     (recur param-argu-pairs)
