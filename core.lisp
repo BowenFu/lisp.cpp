@@ -6,6 +6,24 @@
     (lambda (x)
     (if x false true)))
 
+(define >
+    (lambda (x y)
+        (< y x)
+    )
+)
+
+(define <=
+    (lambda (x y)
+        (not (> x y))
+    )
+)
+
+(define >=
+    (lambda (x y)
+        (not (< x y))
+    )
+)
+
 (define
     (- . lst)
         (define rest (cdr lst))

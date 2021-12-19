@@ -80,6 +80,24 @@ auto isEqOp = [](std::vector<std::shared_ptr<Expr>> const& args)
     return (args.at(0) == args.at(1) || (args.at(0)->equalTo(args.at(1)))) ? true_() : false_(); 
 };
 
+template <typename Func>
+constexpr auto numOp(Func func)
+{
+    return [func](std::vector<std::shared_ptr<Expr> > const &args)
+    {
+        ASSERT(args.size() == 2);
+        auto lhs = args.at(0);
+        auto rhs = args.at(1);
+        auto lhsN = dynamic_cast<Number *>(lhs.get());
+        auto rhsN = dynamic_cast<Number *>(rhs.get());
+        ASSERT(lhsN);
+        ASSERT(rhsN);
+        return func(lhsN->get(), rhsN->get()) ? true_() : false_();
+    };
+}
+
+constexpr auto lessOp = numOp(std::less<>());
+
 auto mulOp = [](std::vector<std::shared_ptr<Expr>> const& args)
 {
     auto result = std::accumulate(args.begin(), args.end(), 1.0, [](auto p, std::shared_ptr<Expr> const& arg)
@@ -110,14 +128,6 @@ auto divOp = [](std::vector<std::shared_ptr<Expr>> const& args)
     return std::shared_ptr<Expr>(new Number(num1.get() / num2.get())); 
 };
 
-auto ltOp = [](std::vector<std::shared_ptr<Expr>> const& args)
-{
-    ASSERT(args.size() == 2);
-    auto num1 = dynamic_cast<Number&>(*args.at(0));
-    auto num2 = dynamic_cast<Number&>(*args.at(1));
-    return std::shared_ptr<Expr>(new Bool(num1.get() < num2.get())); 
-};
-
 auto setUpEnvironment()
 {
     auto emptyEnv = std::make_shared<Env>();
@@ -135,7 +145,7 @@ auto setUpEnvironment()
     initialEnv->defineVariable("pair?", ExprPtr{new PrimitiveProcedure{isPairOp}});
     initialEnv->defineVariable("eq?", ExprPtr{new PrimitiveProcedure{isEqOp}});
     initialEnv->defineVariable("=", ExprPtr{new PrimitiveProcedure{isEqOp}});
-    initialEnv->defineVariable("<", ExprPtr{new PrimitiveProcedure{ltOp}});
+    initialEnv->defineVariable("<", ExprPtr{new PrimitiveProcedure{lessOp}});
     initialEnv->defineVariable("+", ExprPtr{new PrimitiveProcedure{addOp}});
     initialEnv->defineVariable("*", ExprPtr{new PrimitiveProcedure{mulOp}});
     initialEnv->defineVariable("/", ExprPtr{new PrimitiveProcedure{divOp}});
