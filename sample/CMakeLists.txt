@@ -140,7 +140,8 @@ do_test(test_cons_pred "cons? (cons? (cons 1 2))" "true")
 do_test(test_list "(list 1 2)" "(1 2)")
 do_test(test_list_star "(list* 1 2)" "(1 . 2)")
 
-do_test(test_let "(let ((x 1)) (+ x 2))" "3")
+do_test(test_let "(define x -1)(let ((x 1)(y (- x))) (+ y x))" "2")
+do_test(test_let* "(define x -1)(let* ((x 1)(y (- x))) (+ y x))" "0")
 
 do_test(test_quasiquote_nested "`(1 `,(+ 1 ,(+ 2 3)) 4)" "\\\\(1 \\\\(\\\\'quasiquote \\\\(\\\\'unquote \\\\(\\\\'\\\\+ 1 5\\\\)\\\\)\\\\) 4\\\\)")
 
@@ -164,3 +165,5 @@ do_test(test_or_5 "(or (and #f 'x) \"2\" 1)" "2")
 
 do_test(test_recursive_and "(and 1 (and 2 (and 3 4)))" "4")
 do_test(test_recursive_and "(or (or 2 (and 3 4) (and 5 6)))" "2")
+
+do_test(test_map "(map - '(1 2 3))" "\\\\(-1 -2 -3\\\\)")

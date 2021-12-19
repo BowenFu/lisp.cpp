@@ -48,8 +48,9 @@ auto consPred = [](std::vector<std::shared_ptr<Expr>> const& args)
 auto carOp = [](std::vector<std::shared_ptr<Expr>> const& args)
 {
     ASSERT(args.size() == 1);
-    auto cons_ = dynamic_cast<Cons&>(*args.at(0));
-    return cons_.car(); 
+    auto cons_ = dynamic_cast<Cons*>(args.at(0).get());
+    ASSERT(cons_);
+    return cons_->car(); 
 };
 
 auto cdrOp = [](std::vector<std::shared_ptr<Expr>> const& args)

@@ -47,7 +47,7 @@ public:
     ExprPtr lookupVariableValue(std::string const& variableName)
     {
         Env* env = this;
-        while (env != nullptr)
+        while (env != nullptr && !env->mFrame.empty())
         {
             auto iter = env->mFrame.find(variableName);
             if (iter != env->mFrame.end())
@@ -493,11 +493,17 @@ public:
     }
 };
 
-inline std::vector<ExprPtr> listOfValues(std::vector<ExprPtr> const& exprs, std::shared_ptr<Env> const& env)
+auto expandMacros(ExprPtr const& expr, std::shared_ptr<Env> const& env) -> ExprPtr;
+
+inline std::vector<ExprPtr> listOfValues(std::vector<ExprPtr> const& exprs, std::shared_ptr<Env> const& env, bool isMacroCall)
 {
     std::vector<ExprPtr> values;
-    std::transform(exprs.begin(), exprs.end(), std::back_insert_iterator(values), [&env](ExprPtr const& e)
+    std::transform(exprs.begin(), exprs.end(), std::back_insert_iterator(values), [isMacroCall, &env](ExprPtr const& e)
     {
+        if (isMacroCall)
+        {
+            return expandMacros(e, env);
+        }
         return e->eval(env);
     }
     );
@@ -632,7 +638,7 @@ public:
     {
         auto op = mOperator->eval(env);
         auto isMacroCall = dynamic_cast<MacroProcedure const*>(op.get());
-        auto args = isMacroCall ? mOperands : listOfValues(mOperands, env);
+        auto args = listOfValues(mOperands, env, isMacroCall);
         return dynamic_cast<Procedure&>(*op).apply(args);
     }
     std::string toString() const override
