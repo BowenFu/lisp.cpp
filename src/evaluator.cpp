@@ -76,3 +76,30 @@ std::vector<ExprPtr> consToVec(ExprPtr const& expr)
     }
     return vec;
 }
+
+auto expandMacros(ExprPtr const& expr, std::shared_ptr<Env> const& env) -> ExprPtr
+{
+    if (auto macroDefinition = parseMacroDefinition(expr))
+    {
+        macroDefinition->eval(env);
+        return nil();
+    }
+    if (auto e = tryMacroCall(expr, env))
+    {
+        if (e != expr)
+        {
+            return e;
+        }
+    }
+    if (auto c = dynamic_cast<Cons const*>(expr.get()))
+    {
+        auto carResult = expandMacros(c->car(), env);
+        auto cdrResult = expandMacros(c->cdr(), env);
+        if (carResult == c->car() && cdrResult == c->cdr())
+        {
+            return expr;
+        }
+        return ExprPtr{new Cons{carResult, cdrResult}};
+    }
+    return expr;
+}

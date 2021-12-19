@@ -56,14 +56,31 @@
     (car (car (cdr args)))
 )
 
-(define let (macro (param-argu-pairs body)
-    (define recur (lambda (param-argu-pairs-internal)
-        (if (cons? param-argu-pairs-internal)
-            `((lambda (,(caar param-argu-pairs-internal)) ,(recur (cdr param-argu-pairs-internal))) ,(cadar param-argu-pairs-internal))
+(define (map func lst)
+    (if (null? lst)
+        '()
+        (cons (func (car lst)) (map func (cdr lst)))
+    )
+)
+
+(define let (macro (arg-param-pairs body)
+    (define let->combination (lambda (arg-param-pairs-internal)
+        (define args (map car arg-param-pairs-internal))
+        (define params (map cadr arg-param-pairs-internal))
+        `((lambda ,args (begin ,body)) ,@params)))
+    (let->combination arg-param-pairs)
+    )
+)
+
+; cannot pass function call results to macro call.
+(define let* (macro (arg-param-pairs body)
+    (define recur (lambda (arg-param-pairs-internal)
+        (if (cons? arg-param-pairs-internal)
+            `((lambda (,(caar arg-param-pairs-internal)) ,(recur (cdr arg-param-pairs-internal))) ,(cadar arg-param-pairs-internal))
             `,body
         )
     ))
-    (recur param-argu-pairs)
+    (recur arg-param-pairs)
     )
 )
 

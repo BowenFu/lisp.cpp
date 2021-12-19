@@ -196,8 +196,6 @@ inline ExprPtr application(ExprPtr const& car, ExprPtr const& cdr)
     return ExprPtr{new Application(op, params)};
 }
 
-inline auto expandMacros(ExprPtr const& expr, std::shared_ptr<Env> const& env) -> ExprPtr;
-
 inline ExprPtr tryMacroApplication(ExprPtr const& expr, std::shared_ptr<Env> const& env)
 {
     auto cons = dynamic_cast<Cons*>(expr.get());
@@ -209,12 +207,7 @@ inline ExprPtr tryMacroApplication(ExprPtr const& expr, std::shared_ptr<Env> con
     if (dynamic_cast<MacroProcedure const*>(evaledOp.get()))
     {
         std::vector<ExprPtr> params = consToVec(cdr);
-        auto result = Application(evaledOp, params).eval(env);
-        if (auto e = expandMacros(result, env))
-        {
-            return e;
-        }
-        return result;
+        return Application(evaledOp, params).eval(env);
     }
     return expr;
 }
@@ -421,34 +414,6 @@ inline auto parseAsQuoted(ExprPtr const& expr, std::optional<int32_t> quasiquote
 
     // else expr is cons, map quote on it
     return consToQuoted(expr, quasiquoteLevel);
-}
-
-// FIXME
-inline auto expandMacros(ExprPtr const& expr, std::shared_ptr<Env> const& env) -> ExprPtr
-{
-    if (auto macroDefinition = parseMacroDefinition(expr))
-    {
-        macroDefinition->eval(env);
-        return nil();
-    }
-    if (auto e = tryMacroCall(expr, env))
-    {
-        if (e != expr)
-        {
-            return e;
-        }
-    }
-    if (auto c = dynamic_cast<Cons const*>(expr.get()))
-    {
-        auto carResult = expandMacros(c->car(), env);
-        auto cdrResult = expandMacros(c->cdr(), env);
-        if (carResult == c->car() && cdrResult == c->cdr())
-        {
-            return expr;
-        }
-        return ExprPtr{new Cons{carResult, cdrResult}};
-    }
-    return expr;
 }
 
 #endif // LISP_PARSER_H
