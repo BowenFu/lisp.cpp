@@ -214,8 +214,6 @@
     )
 )
 
-; not sure why let* does not work in this case.
-; fix let* later
 (define (filter pred lst)
     (if (null? lst)
         '()
