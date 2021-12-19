@@ -6,6 +6,14 @@
     (lambda (x)
     (if x false true)))
 
+(define
+    (- . lst)
+        (define rest (cdr lst))
+        (if
+            (cons? rest) (+ (car lst) (* -1 (car rest)))
+            (* -1 (car lst))
+        ))
+
 (define list (lambda args args))
 
 (define list*
@@ -124,17 +132,3 @@
         )
         (expand-clauses clauses)
     ))
-
-(define
-    (- . lst)
-        (define rest (cdr lst))
-        (if
-            (cons? rest) (+ (car lst) (* -1 (car rest)))
-            (* -1 (car lst))
-        ))
-
-(define (isZero x)
-    (cond ((= x 0) (print x))
-    (else (print "xxxx"))
-    )
-)
