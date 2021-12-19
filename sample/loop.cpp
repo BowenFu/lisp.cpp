@@ -179,6 +179,12 @@ auto& globalEnvironment()
     return env;
 }
 
+auto& globalMacroEnvironment()
+{
+    static auto macroEnv = globalEnvironment()->extend(Params{}, {});
+    return macroEnv;
+}
+
 constexpr auto inputPrompt = ";;; M-Eval input:";
 constexpr auto outputPrompt = ";;; M-Eval value:";
 
@@ -192,12 +198,11 @@ void announceOutput(std::string const& string)
     std::cout << "\n" << string << std::endl;
 }
 
-auto eval(std::string const& input, std::shared_ptr<Env> const& env)
+auto eval(std::string const& input, std::shared_ptr<Env> const& env, std::shared_ptr<Env> const& macroEnv)
 {
     Lexer lex(input);
     MetaParser p(lex);
     std::string result;
-    auto macroEnv = env;
     do
     {
         auto me = p.sexpr();
@@ -225,7 +230,7 @@ void preEval()
     std::ifstream ifs(path);
     std::string content((std::istreambuf_iterator<char>(ifs)),
                         (std::istreambuf_iterator<char>()));
-    auto output = eval(content, globalEnvironment());
+    auto output = eval(content, globalEnvironment(), globalMacroEnvironment());
     (void)output;
 }
 
@@ -242,7 +247,7 @@ void driverLoop()
     {
         allInput += input;
     }
-    auto output = eval(allInput, globalEnvironment());
+    auto output = eval(allInput, globalEnvironment(), globalMacroEnvironment());
     announceOutput(outputPrompt);
     std::cout << output << std::endl;
     driverLoop();
@@ -281,7 +286,7 @@ int32_t main(int n, char** args)
                                 (std::istreambuf_iterator<char>()));
             input = std::move(content);
         }
-        auto output = eval(input, globalEnvironment());
+        auto output = eval(input, globalEnvironment(), globalMacroEnvironment());
         std::cout << output << std::endl;
     }
     return 0;

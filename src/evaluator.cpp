@@ -82,6 +82,7 @@ auto expandMacros(ExprPtr const& expr, std::shared_ptr<Env> const& env) -> ExprP
     if (auto macroDefinition = parseMacroDefinition(expr))
     {
         macroDefinition->eval(env);
+        std::cout << "Define " << macroDefinition->toString() << std::endl;
         return nil();
     }
     if (auto e = tryMacroCall(expr, env))
