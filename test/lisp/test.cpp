@@ -473,7 +473,7 @@ TEST(Parser, Application2)
 
 TEST(Parser, begin2)
 {
-    std::initializer_list<std::pair<std::string, std::string> > expected = {{"Sequence", "2"}};
+    std::initializer_list<std::pair<std::string, std::string> > expected = {{"(Sequence: 1 2)", "2"}};
 
     Lexer lex("(begin 1 2)");
     MetaParser p(lex);
