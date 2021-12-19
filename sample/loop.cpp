@@ -5,7 +5,7 @@
 #include <filesystem>
 namespace fs = std::filesystem;
 
-#define DEBUG 1
+#define DEBUG 0
 
 auto consOp = [](std::vector<std::shared_ptr<Expr>> const& args)
 {
