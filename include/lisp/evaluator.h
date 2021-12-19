@@ -47,7 +47,7 @@ public:
     ExprPtr lookupVariableValue(std::string const& variableName)
     {
         Env* env = this;
-        while (env != nullptr && !env->mFrame.empty())
+        while (env != nullptr)
         {
             auto iter = env->mFrame.find(variableName);
             if (iter != env->mFrame.end())
