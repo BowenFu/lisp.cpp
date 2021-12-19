@@ -5,7 +5,7 @@
 #include <filesystem>
 namespace fs = std::filesystem;
 
-#define DEBUG 0
+#define DEBUG 1
 
 auto consOp = [](std::vector<std::shared_ptr<Expr>> const& args)
 {
@@ -74,6 +74,21 @@ auto isPairOp = [](std::vector<std::shared_ptr<Expr>> const& args)
     return result ? true_() : false_(); 
 };
 
+auto modOp = [](std::vector<std::shared_ptr<Expr>> const& args)
+{
+    ASSERT(args.size() == 2);
+    auto lhsNum = dynamic_cast<Number*>(args.at(0).get());
+    ASSERT(lhsNum);
+    auto lhsD = lhsNum->get();
+    auto rhsNum = dynamic_cast<Number*>(args.at(1).get());
+    ASSERT(rhsNum);
+    auto rhsD = rhsNum->get();
+    ASSERT(std::trunc(lhsD) == lhsD);
+    ASSERT(std::trunc(rhsD) == rhsD);
+    double result = static_cast<int32_t>(lhsD) % static_cast<int32_t>(rhsD);
+    return ExprPtr{new Number{result}}; 
+};
+
 auto isEqOp = [](std::vector<std::shared_ptr<Expr>> const& args)
 {
     ASSERT(args.size() == 2);
@@ -81,7 +96,7 @@ auto isEqOp = [](std::vector<std::shared_ptr<Expr>> const& args)
 };
 
 template <typename Func>
-constexpr auto numOp(Func func)
+constexpr auto numBinOp(Func func)
 {
     return [func](std::vector<std::shared_ptr<Expr> > const &args)
     {
@@ -96,7 +111,7 @@ constexpr auto numOp(Func func)
     };
 }
 
-constexpr auto lessOp = numOp(std::less<>());
+constexpr auto lessOp = numBinOp(std::less<>());
 
 auto mulOp = [](std::vector<std::shared_ptr<Expr>> const& args)
 {
@@ -144,6 +159,7 @@ auto setUpEnvironment()
     initialEnv->defineVariable("null?", ExprPtr{new PrimitiveProcedure{isNullOp}});
     initialEnv->defineVariable("pair?", ExprPtr{new PrimitiveProcedure{isPairOp}});
     initialEnv->defineVariable("eq?", ExprPtr{new PrimitiveProcedure{isEqOp}});
+    initialEnv->defineVariable("%", ExprPtr{new PrimitiveProcedure{modOp}});
     initialEnv->defineVariable("=", ExprPtr{new PrimitiveProcedure{isEqOp}});
     initialEnv->defineVariable("<", ExprPtr{new PrimitiveProcedure{lessOp}});
     initialEnv->defineVariable("+", ExprPtr{new PrimitiveProcedure{addOp}});

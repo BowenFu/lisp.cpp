@@ -46,6 +46,15 @@
         ($f args)
        ))
 
+(define append
+    (lambda (lhs rhs)
+        (if (null? lhs)
+            rhs
+            (cons (car lhs) (append (cdr lhs) rhs))
+        )
+    )
+)
+
 (define (caar args)
     (car (car args))
 )
@@ -74,12 +83,30 @@
     (car (car (cdr args)))
 )
 
-(define (map func lst)
+(define (map proc lst)
     (if (null? lst)
         '()
-        (cons (func (car lst)) (map func (cdr lst)))
+        (cons (proc (car lst)) (map proc (cdr lst)))
     )
 )
+
+; not sure why let* does not work in this case.
+; fix let* later
+(define (filter pred lst)
+    (if (null? lst)
+        '()
+        (begin
+            (define elem (car lst))
+            (define check-result (pred elem))
+            (define rest-result (filter pred (cdr lst)))
+            (if check-result
+                (cons elem rest-result)
+                rest-result)
+        )
+    )
+)
+
+(define (even num) (= (% num 2) 0)) 
 
 (define (len lst)
     ; (if (atom? lst) (error "Not a list when calling with len" lst) '())
@@ -116,8 +143,11 @@
 (define let* (macro (arg-param-pairs body)
     (define recur (lambda (arg-param-pairs-internal)
         (if (cons? arg-param-pairs-internal)
+            (begin
+            (print `((lambda (,(caar arg-param-pairs-internal)) ,(recur (cdr arg-param-pairs-internal))) ,(cadar arg-param-pairs-internal)))
             `((lambda (,(caar arg-param-pairs-internal)) ,(recur (cdr arg-param-pairs-internal))) ,(cadar arg-param-pairs-internal))
-            `,body
+            )
+            body
         )
     ))
     (recur arg-param-pairs)

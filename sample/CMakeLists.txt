@@ -170,3 +170,6 @@ do_test(test_recursive_and "(and 1 (and 2 (and 3 4)))" "4")
 do_test(test_recursive_and "(or (or 2 (and 3 4) (and 5 6)))" "2")
 
 do_test(test_map "(map - '(1 2 3))" "\\\\(-1 -2 -3\\\\)")
+
+do_test(test_append "(append '(1 2) '(3 4))" "\\\\(1 2 3 4\\\\)")
+do_test(test_filter "(filter even '(1 2 3 4))" "\\\\(2 4\\\\)")
