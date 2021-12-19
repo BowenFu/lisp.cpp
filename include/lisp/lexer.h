@@ -55,9 +55,13 @@ public:
     {
         return mInput.at(mPos);
     }
+    bool currentValid() const
+    {
+        return mPos < mInput.size();
+    }
     Token nextToken()
     {
-        while (mPos < mInput.size())
+        while (currentValid())
         {
             auto c = currentChar();
             if (c == '"')
@@ -91,6 +95,9 @@ public:
                     return Token{TokenType::kUNQUOTE_SPLICING, std::string{",@"}};
                 }
                 return Token{TokenType::kUNQUOTE, std::string{c}};
+            case ';':
+                consumeComment();
+                continue;
             default:
                 return wordToken();
             }
@@ -100,7 +107,7 @@ public:
     Token wordToken()
     {
         std::ostringstream word{};
-        while (mPos < mInput.size())
+        while (currentValid())
         {
             auto c = currentChar();
             if(isWS(c) || elem(c, {'(', ')'}))
@@ -131,6 +138,14 @@ public:
         }
         mPos = end;
         return Token{TokenType::kWORD, wordStr};
+    }
+    void consumeComment()
+    {
+        ASSERT(currentChar() == ';');
+        while (currentValid() && currentChar() != '\r' && currentChar() != '\n')
+        {
+            consume();
+        }
     }
 private:
     std::string mInput;

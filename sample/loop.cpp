@@ -13,6 +13,28 @@ auto consOp = [](std::vector<std::shared_ptr<Expr>> const& args)
     return ExprPtr{new Cons{args.at(0), args.at(1)}}; 
 };
 
+auto printOp = [](std::vector<std::shared_ptr<Expr>> const& args)
+{
+    for (auto const& e: args)
+    {
+        std::cout << e->toString();
+    }
+    std::cout << std::endl;
+    return nil(); 
+};
+
+auto errorOp = [](std::vector<std::shared_ptr<Expr>> const& args)
+{
+    std::stringstream o;
+    for (auto const& e: args)
+    {
+        o << e->toString() << " ";
+    }
+    o << std::endl;
+    throw std::runtime_error{o.str()};
+    return nil(); 
+};
+
 auto consPred = [](std::vector<std::shared_ptr<Expr>> const& args)
 {
     ASSERT(args.size() == 1);
@@ -104,6 +126,8 @@ auto setUpEnvironment()
 
     initialEnv->defineVariable("cons", ExprPtr{new PrimitiveProcedure{consOp}});
     initialEnv->defineVariable("cons?", ExprPtr{new PrimitiveProcedure{consPred}});
+    initialEnv->defineVariable("print", ExprPtr{new PrimitiveProcedure{printOp}});
+    initialEnv->defineVariable("error", ExprPtr{new PrimitiveProcedure{errorOp}});
     initialEnv->defineVariable("car", ExprPtr{new PrimitiveProcedure{carOp}});
     initialEnv->defineVariable("cdr", ExprPtr{new PrimitiveProcedure{cdrOp}});
     initialEnv->defineVariable("null?", ExprPtr{new PrimitiveProcedure{isNullOp}});
@@ -151,6 +175,9 @@ auto eval(std::string const& input, std::shared_ptr<Env> const& env)
     do
     {
         auto me = p.sexpr();
+#if DEBUG
+        std::cout << "me ## " << me->toString() << std::endl; 
+#endif // DEBUG
         auto ee = expandMacros(me, macroEnv);
 #if DEBUG
         std::cout << "ee ## " << ee->toString() << std::endl; 

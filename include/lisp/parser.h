@@ -189,20 +189,6 @@ inline std::pair<ExprPtr, ExprPtr> parseCondClauses(ExprPtr const& expr, bool& h
     return {pred, action};
 }
 
-inline ExprPtr cond(ExprPtr const& expr)
-{
-    std::vector<std::pair<ExprPtr, ExprPtr>> condClauses;
-    bool hasNext = true;
-    auto me = expr;
-    while (hasNext && me != nil())
-    {
-        auto [car, cdr] = deCons(me);
-        condClauses.push_back(parseCondClauses(car, hasNext));
-        me = cdr;
-    }
-    return ExprPtr{new Cond(condClauses)};
-}
-
 inline ExprPtr application(ExprPtr const& car, ExprPtr const& cdr)
 {
     auto op = parse(car);
@@ -210,16 +196,27 @@ inline ExprPtr application(ExprPtr const& car, ExprPtr const& cdr)
     return ExprPtr{new Application(op, params)};
 }
 
-inline ExprPtr tryMacroApplication(ExprPtr const& car, ExprPtr const& cdr, std::shared_ptr<Env> const& env)
+inline auto expandMacros(ExprPtr const& expr, std::shared_ptr<Env> const& env) -> ExprPtr;
+
+inline ExprPtr tryMacroApplication(ExprPtr const& expr, std::shared_ptr<Env> const& env)
 {
+    auto cons = dynamic_cast<Cons*>(expr.get());
+    ASSERT(cons);
+    auto car = cons->car();
+    auto cdr = cons->cdr();
     auto op = parse(car);
     auto evaledOp = op->eval(env);
     if (dynamic_cast<MacroProcedure const*>(evaledOp.get()))
     {
         std::vector<ExprPtr> params = consToVec(cdr);
-        return Application(evaledOp, params).eval(env);
+        auto result = Application(evaledOp, params).eval(env);
+        if (auto e = expandMacros(result, env))
+        {
+            return e;
+        }
+        return result;
     }
-    return ExprPtr{new Cons{car, cdr}};
+    return expr;
 }
 
 inline ExprPtr application(ExprPtr const& expr)
@@ -259,7 +256,6 @@ inline auto tryCons(ExprPtr const& expr) -> ExprPtr
     keywordToHandler["lambda"] = lambda;
     keywordToHandler["macro"] = macro;
     keywordToHandler["if"] = if_;
-    keywordToHandler["cond"] = cond;
     keywordToHandler["begin"] = [](auto cdr){ return std::static_pointer_cast<Expr>(sequence(cdr));};
     keywordToHandler["quote"] = quote;
     keywordToHandler["quasiquote"] = quasiquote;
@@ -342,7 +338,7 @@ inline auto tryMacroCall(ExprPtr const& expr, std::shared_ptr<Env> const& env) -
     }
     if (env->variableDefined(carStr.value()))
     {
-        return tryMacroApplication(car, cdr, env);
+        return tryMacroApplication(expr, env);
     }
     return expr;
 }
@@ -437,11 +433,20 @@ inline auto expandMacros(ExprPtr const& expr, std::shared_ptr<Env> const& env) -
     }
     if (auto e = tryMacroCall(expr, env))
     {
-        return e;
+        if (e != expr)
+        {
+            return e;
+        }
     }
     if (auto c = dynamic_cast<Cons const*>(expr.get()))
     {
-        return ExprPtr{new Cons{expandMacros(c->car(), env), expandMacros(c->cdr(), env)}};
+        auto carResult = expandMacros(c->car(), env);
+        auto cdrResult = expandMacros(c->cdr(), env);
+        if (carResult == c->car() && cdrResult == c->cdr())
+        {
+            return expr;
+        }
+        return ExprPtr{new Cons{carResult, cdrResult}};
     }
     return expr;
 }

@@ -186,30 +186,8 @@ inline std::string Literal<std::string>::toString() const
 ExprPtr true_();
 ExprPtr false_();
 
-class Symbol final : public Expr, public std::enable_shared_from_this<Symbol>
-{
-    std::string mInternal;
-public:
-    explicit Symbol(std::string const& name)
-    : mInternal{name}
-    {
-    }
-    ExprPtr eval(std::shared_ptr<Env> const& /* env */) override
-    {
-        return shared_from_this();
-    }
-    std::string toString() const override
-    {
-        return "'" + mInternal;
-    }
-    std::string get() const
-    {
-        return mInternal;
-    }
-};
-
 // For meta parser only
-class RawWord final : public Expr
+class RawWord : public Expr
 {
     std::string mInternal;
 public:
@@ -228,6 +206,29 @@ public:
     std::string get() const
     {
         return mInternal;
+    }
+    bool equalTo(ExprPtr const& other) const override
+    {
+        auto theOther = dynamic_cast<RawWord*>(other.get());
+        if (theOther)
+        {
+            return get() == theOther->get();
+        }
+        return false;
+    }
+};
+
+class Symbol final : public RawWord, public std::enable_shared_from_this<Symbol>
+{
+public:
+    using RawWord::RawWord;
+    std::string toString() const override
+    {
+        return "'" + RawWord::toString();
+    }
+    ExprPtr eval(std::shared_ptr<Env> const& /* env */) override
+    {
+        return shared_from_this();
     }
 };
 
@@ -492,30 +493,6 @@ public:
     }
 };
 
-class Cond final : public Expr
-{
-    std::vector<std::pair<ExprPtr, ExprPtr>> mClauses;
-public:
-    Cond(std::vector<std::pair<ExprPtr, ExprPtr>> const &clauses)
-        : mClauses{clauses}
-    {}
-    ExprPtr eval(std::shared_ptr<Env> const& env) override
-    {
-        for (auto& e : mClauses)
-        {
-            if (isTrue(e.first->eval(env)))
-            {
-                return e.second->eval(env);
-            }
-        }
-        FAIL("Missing case in cond!");
-    }
-    std::string toString() const override
-    {
-        return "Cond";
-    }
-};
-
 inline std::vector<ExprPtr> listOfValues(std::vector<ExprPtr> const& exprs, std::shared_ptr<Env> const& env)
 {
     std::vector<ExprPtr> values;
@@ -661,7 +638,7 @@ public:
     std::string toString() const override
     {
         std::ostringstream o;
-        o << "Application (" << mOperator->toString();
+        o << "(App:" << mOperator->toString();
         for (auto const& e: mOperands)
         {
             o << " " << e->toString();

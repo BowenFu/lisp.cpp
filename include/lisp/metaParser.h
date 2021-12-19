@@ -61,6 +61,22 @@ public:
             auto substr = str.substr(1U, str.size() - 2U);
             return ExprPtr{new String(substr)};
         }
+        if (c == '#')
+        {
+            ASSERT(str.size() == 2);
+            switch (str[1])
+            {
+            case 't':
+                return true_();
+            case 'f':
+                return false_();
+            
+            default:
+                FAIL("Not implemented yet!");
+                break;
+            }
+            return true_();
+        }
         return ExprPtr{new RawWord(str)};
     }
 
