@@ -1,113 +1,3 @@
-(define atom?
-    (lambda (x)
-    (and (not (pair? x)) (not (null? x)))))
-
-(define not
-    (lambda (x)
-    (if x false true)))
-
-(define >
-    (lambda (x y)
-        (< y x)
-    )
-)
-
-(define <=
-    (lambda (x y)
-        (not (> x y))
-    )
-)
-
-(define >=
-    (lambda (x y)
-        (not (< x y))
-    )
-)
-
-(define
-    (- . lst)
-        (define rest (cdr lst))
-        (if
-            (cons? rest) (+ (car lst) (* -1 (car rest)))
-            (* -1 (car lst))
-        ))
-
-(define list (lambda args args))
-
-(define list*
-       (lambda args
-        (define $f
-        (lambda (xs)
-            (if (cons? xs)
-                (if (cons? (cdr xs))
-                    (cons (car xs) ($f (cdr xs)))
-                    (car xs))
-                nil)))
-        ($f args)
-       ))
-
-(define append
-    (lambda (lhs rhs)
-        (if (null? lhs)
-            rhs
-            (cons (car lhs) (append (cdr lhs) rhs))
-        )
-    )
-)
-
-(define (caar args)
-    (car (car args))
-)
-
-(define (cadr args)
-    (car (cdr args))
-)
-
-(define (cdar args)
-    (cdr (car args))
-)
-
-(define (cddr args)
-    (cdr (cdr args))
-)
-
-(define (caddr args)
-    (car (cdr (cdr args)))
-)
-
-(define (cadar args)
-    (car (cdr (car args)))
-)
-
-(define (caadr args)
-    (car (car (cdr args)))
-)
-
-(define (map proc lst)
-    (if (null? lst)
-        '()
-        (cons (proc (car lst)) (map proc (cdr lst)))
-    )
-)
-
-; not sure why let* does not work in this case.
-; fix let* later
-(define (filter pred lst)
-    (if (null? lst)
-        '()
-        (begin
-            (define elem (car lst))
-            (define check-result (pred elem))
-            (define rest-result (filter pred (cdr lst)))
-            (if check-result
-                (cons elem rest-result)
-                rest-result)
-        )
-    )
-)
-
-(define (even num) (= (% num 2) 0)) 
-
 (define (len lst)
     ; (if (atom? lst) (error "Not a list when calling with len" lst) '())
     (if (null? lst)
@@ -115,7 +5,6 @@
         (+ 1 (len (cdr lst)))
     )
 )
-
 (define let (macro name-arg-param-pairs-body
     (define arg-num (len name-arg-param-pairs-body))
     (if (= arg-num 2)
@@ -232,3 +121,113 @@
         )
         (expand-clauses clauses)
     ))
+
+(define atom?
+    (lambda (x)
+    (and (not (pair? x)) (not (null? x)))))
+
+(define not
+    (lambda (x)
+    (if x false true)))
+
+(define >
+    (lambda (x y)
+        (< y x)
+    )
+)
+
+(define <=
+    (lambda (x y)
+        (not (> x y))
+    )
+)
+
+(define >=
+    (lambda (x y)
+        (not (< x y))
+    )
+)
+
+(define
+    (- . lst)
+        (define rest (cdr lst))
+        (if
+            (cons? rest) (+ (car lst) (* -1 (car rest)))
+            (* -1 (car lst))
+        ))
+
+(define list (lambda args args))
+
+(define list*
+       (lambda args
+        (define $f
+        (lambda (xs)
+            (if (cons? xs)
+                (if (cons? (cdr xs))
+                    (cons (car xs) ($f (cdr xs)))
+                    (car xs))
+                nil)))
+        ($f args)
+       ))
+
+(define append
+    (lambda (lhs rhs)
+        (if (null? lhs)
+            rhs
+            (cons (car lhs) (append (cdr lhs) rhs))
+        )
+    )
+)
+
+(define (caar args)
+    (car (car args))
+)
+
+(define (cadr args)
+    (car (cdr args))
+)
+
+(define (cdar args)
+    (cdr (car args))
+)
+
+(define (cddr args)
+    (cdr (cdr args))
+)
+
+(define (caddr args)
+    (car (cdr (cdr args)))
+)
+
+(define (cadar args)
+    (car (cdr (car args)))
+)
+
+(define (caadr args)
+    (car (car (cdr args)))
+)
+
+(define (map proc lst)
+    (if (null? lst)
+        '()
+        (cons (proc (car lst)) (map proc (cdr lst)))
+    )
+)
+
+; not sure why let* does not work in this case.
+; fix let* later
+(define (filter pred lst)
+    (if (null? lst)
+        '()
+        (let*
+           ((elem (car lst))
+            (check-result (pred elem))
+            (rest-result (filter pred (cdr lst))))
+                (if check-result
+                    (cons elem rest-result)
+                    rest-result)
+        )
+    )
+)
+
+(define (even num) (= (% num 2) 0)) 
