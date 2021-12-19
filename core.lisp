@@ -115,6 +115,7 @@
             (if (null? clauses)
                 'false
                 (begin
+                    ; not sure why let does not work well inside macros
                     (define first (car clauses))
                     (define rest (cdr clauses))
                     (if (eq? (car first) 'else)
