@@ -8,9 +8,10 @@
 
 (define
     (- . lst)
-        (cond
-            ((null? (cdr lst)) (* -1 (car lst)))
-            (else (+ (car lst) (* -1 (car (cdr lst)))))
+        (define rest (cdr lst))
+        (if
+            (cons? rest) (+ (car lst) (* -1 (car rest)))
+            (* -1 (car lst))
         ))
 
 (define list (lambda args args))
@@ -108,34 +109,27 @@
     )
 )
 
-(define mycond
-  (macro clauses
-    (define (cond-clauses->if lst)
-        (if (atom? lst)
-            #f
-            (let ((clause (car lst)))
-            (if (or (eq? (car clause) 'else)
-                    (eq? (car clause) #t))
-                (if (null? (cdr clause))
-                    (car clause)
-                    (cons 'begin (cdr clause)))
-                (if (null? (cdr clause))
-                    (list 'or
-                            (car clause)
-                            (cond-clauses->if (cdr lst)))
-                    (if (eq? (cadr clause) '=>)
-                        (if (1arg-lambda? (caddr clause))
-                            (let ((var (caadr (caddr clause))))
-                                `(let ((,var ,(car clause)))
-                                (if ,var ,(cons 'begin (cddr (caddr clause)))
-                                    ,(cond-clauses->if (cdr lst)))))
-                            (let ((b (gensym)))
-                                `(let ((,b ,(car clause)))
-                                (if ,b
-                                    (,(caddr clause) ,b)
-                                    ,(cond-clauses->if (cdr lst))))))
-                        (list 'if
-                                (car clause)
-                                (cons 'begin (cdr clause))
-                                (cond-clauses->if (cdr lst)))))))))
-  (cond-clauses->if clauses)))
+(define cond
+    (macro clauses
+        (define (expand-clauses clauses)
+            (if (null? clauses)
+                'false
+                (begin
+                    ; not sure why let does not work well inside macros
+                    (define first (car clauses))
+                    (define rest (cdr clauses))
+                    (if (eq? (car first) 'else)
+                        (if (null? rest)
+                            `(begin ,@(cdr first))
+                            (error "ELSE clause isn't last -- COND->IF" clauses)
+                        )
+                        `(if ,(car first)
+                            (begin ,@(cdr first))
+                            ,(expand-clauses rest)
+                        )
+                    )
+                )
+            )
+        )
+        (expand-clauses clauses)
+    ))
