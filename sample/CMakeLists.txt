@@ -163,4 +163,4 @@ do_test(test_or_5 "(or (and #f 'x) \"2\" 1)" "2")
 
 
 do_test(test_recursive_and "(and 1 (and 2 (and 3 4)))" "4")
-do_test(test_recursive_and "(or (or 2 (and 3 4) (and 5 6)))" "4")
+do_test(test_recursive_and "(or (or 2 (and 3 4) (and 5 6)))" "2")
