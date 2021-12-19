@@ -28,7 +28,6 @@ ExprPtr Definition::eval(std::shared_ptr<Env> const& env)
 ExprPtr MacroProcedure::apply(std::vector<std::shared_ptr<Expr> > const &args)
 {
     auto result = CompoundProcedureBase::apply(args);
-    // std::cout << "\n## from evaluator.cpp ## : " << result->toString() << std::endl << std::endl;
     return transform(result, [](ExprPtr const& expr)
         {
             if (auto s = dynamic_cast<Symbol const*>(expr.get()))
@@ -82,7 +81,6 @@ auto expandMacros(ExprPtr const& expr, std::shared_ptr<Env> const& env) -> ExprP
     if (auto macroDefinition = parseMacroDefinition(expr))
     {
         macroDefinition->eval(env);
-        std::cout << "Define " << macroDefinition->toString() << std::endl;
         return nil();
     }
     if (auto e = tryMacroCall(expr, env))
