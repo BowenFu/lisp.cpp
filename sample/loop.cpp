@@ -3,6 +3,7 @@
 #include <numeric>
 #include <fstream>
 #include <filesystem>
+#include <cmath>
 namespace fs = std::filesystem;
 
 #define DEBUG 0
