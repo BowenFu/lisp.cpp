@@ -34,7 +34,9 @@ do_test(test_eq8 "(eq? (list 2) (list 2))" true)
 
 do_test(test_define_proc "(define (x) 2) (x)" 2)
 do_test(test_cond1 "(define x #t) (cond (x 1) (else 2))" 1)
-do_test(test_cond2 "(define x #f) (cond (x 1) (else 2))" 2)
+do_test(test_cond2 "(define x #f) (cond (x (print x) 1) (else 2))" 2)
+do_test(test_cond3 "(define x 1) (cond (x (print x) 1) (else 2))" 1)
+do_test(test_cond4 "(define x 1) (cond (x => -) (else 2))" -1)
 
 do_test(test_string1
 "
@@ -141,6 +143,7 @@ do_test(test_list "(list 1 2)" "(1 2)")
 do_test(test_list_star "(list* 1 2)" "(1 . 2)")
 
 do_test(test_let "(define x -1)(let ((x 1)(y (- x))) (+ y x))" "2")
+do_test(test_named_let "(define (fib n) (let fib-iter ((a 1)(b 0)(count n)) (if (= count 0) b (fib-iter (+ a b) a (- count 1))))) (fib 3)" "2")
 do_test(test_let* "(define x -1)(let* ((x 1)(y (- x))) (+ y x))" "0")
 
 do_test(test_quasiquote_nested "`(1 `,(+ 1 ,(+ 2 3)) 4)" "\\\\(1 \\\\(\\\\'quasiquote \\\\(\\\\'unquote \\\\(\\\\'\\\\+ 1 5\\\\)\\\\)\\\\) 4\\\\)")

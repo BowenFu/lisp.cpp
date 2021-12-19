@@ -448,7 +448,14 @@ public:
     }
     std::string toString() const override
     {
-        return "Sequence";
+        std::ostringstream o;
+        o << "(Sequence:";
+        for (auto const& e : mActions)
+        {
+            o << " " << e->toString();
+        }
+        o << ")";
+        return o.str();
     }
 };
 

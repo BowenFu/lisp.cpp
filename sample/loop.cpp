@@ -142,8 +142,6 @@ auto setUpEnvironment()
 
     initialEnv->defineVariable("true", true_());
     initialEnv->defineVariable("false", false_());
-    initialEnv->defineVariable("#t", true_());
-    initialEnv->defineVariable("#f", false_());
     initialEnv->defineVariable("nil", nil());
     return initialEnv;
 }
