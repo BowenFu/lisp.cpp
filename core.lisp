@@ -143,10 +143,7 @@
 (define let* (macro (arg-param-pairs body)
     (define recur (lambda (arg-param-pairs-internal)
         (if (cons? arg-param-pairs-internal)
-            (begin
-            (print `((lambda (,(caar arg-param-pairs-internal)) ,(recur (cdr arg-param-pairs-internal))) ,(cadar arg-param-pairs-internal)))
             `((lambda (,(caar arg-param-pairs-internal)) ,(recur (cdr arg-param-pairs-internal))) ,(cadar arg-param-pairs-internal))
-            )
             body
         )
     ))
