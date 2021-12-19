@@ -207,7 +207,8 @@ inline ExprPtr tryMacroApplication(ExprPtr const& expr, std::shared_ptr<Env> con
     if (dynamic_cast<MacroProcedure const*>(evaledOp.get()))
     {
         std::vector<ExprPtr> params = consToVec(cdr);
-        return Application(evaledOp, params).eval(env);
+        auto result = Application(evaledOp, params).eval(env);
+        return result;
     }
     return expr;
 }

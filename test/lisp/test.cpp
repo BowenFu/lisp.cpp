@@ -21,7 +21,7 @@ TEST(Lexer, 1)
 
 TEST(Parser, 1)
 {
-    std::initializer_list<std::pair<std::string, std::string>> expected = {{"Definition ( square : Lambda )", "CompoundProcedure (y, <procedure-env>)"}, {"(App:square 7)", "49"}};
+    std::initializer_list<std::pair<std::string, std::string>> expected = {{"Definition ( square : Lambda )", "CompoundProcedure (y, (Sequence: (App:* y y)), <procedure-env>)"}, {"(App:square 7)", "49"}};
 
     Lexer lex("(define square (lambda (y) (* y y))) (square 7)");
     MetaParser p(lex);
@@ -55,7 +55,8 @@ TEST(Parser, 1)
 TEST(Parser, 2)
 {
     std::initializer_list<std::pair<std::string, std::string> > expected =
-        {{"Definition ( factorial : Lambda )", "CompoundProcedure (y, <procedure-env>)"},
+        {{"Definition ( factorial : Lambda )",
+        "CompoundProcedure (y, (Sequence: (if (App:= y 0) 1 (App:* y (App:factorial (App:- y 1))))), <procedure-env>)"},
         {"(App:factorial 5)", "120"}};
 
     Lexer lex("(define factorial (lambda (y) (if (= y 0) 1 (* y (factorial (- y 1)))))) (factorial 5)");
@@ -120,7 +121,10 @@ TEST(Parser, 2)
 
 TEST(Parser, begin)
 {
-    std::initializer_list<std::pair<std::string, std::string>> expected = {{"Definition ( square : Lambda )", "CompoundProcedure (y, <procedure-env>)"}, {"(App:square 7)", "49"}};
+    std::initializer_list<std::pair<std::string, std::string>> expected =
+        {{"Definition ( square : Lambda )",
+        "CompoundProcedure (y, (Sequence: (App:* (Sequence: 1 y) y)), <procedure-env>)"},
+        {"(App:square 7)", "49"}};
 
     Lexer lex("(define square (lambda (y) (* (begin 1 y) y))) (square 7)");
     MetaParser p(lex);
@@ -328,7 +332,7 @@ TEST(Parser, Assignment2)
 
 TEST(Parser, Lambda)
 {
-    std::initializer_list<std::pair<std::string, std::string> > expected = {{"Lambda", "CompoundProcedure (<procedure-env>)"}};
+    std::initializer_list<std::pair<std::string, std::string> > expected = {{"Lambda", "CompoundProcedure ((Sequence: 1), <procedure-env>)"}};
 
     Lexer lex("(lambda () 1)");
     MetaParser p(lex);
@@ -347,7 +351,7 @@ TEST(Parser, Lambda)
 
 TEST(Parser, Lambda2)
 {
-    std::initializer_list<std::pair<std::string, std::string> > expected = {{"Lambda", "CompoundProcedure (x, <procedure-env>)"}};
+    std::initializer_list<std::pair<std::string, std::string> > expected = {{"Lambda", "CompoundProcedure (x, (Sequence: x), <procedure-env>)"}};
 
     Lexer lex("(lambda (x) x)");
     MetaParser p(lex);
@@ -367,7 +371,7 @@ TEST(Parser, Lambda2)
 TEST(Parser, Variadic)
 {
     std::initializer_list<std::pair<std::string, std::string> > expected =
-        {{"Definition ( to-list : Lambda )", "CompoundProcedure (. y, <procedure-env>)"},
+        {{"Definition ( to-list : Lambda )", "CompoundProcedure (. y, (Sequence: y), <procedure-env>)"},
          {"(App:to-list 1)", "(1)"}};
 
     Lexer lex("(define (to-list . y) y) (to-list 1)");
@@ -390,7 +394,7 @@ TEST(Parser, Variadic)
 TEST(Parser, Variadic2)
 {
     std::initializer_list<std::pair<std::string, std::string> > expected =
-        {{"Definition ( rest : Lambda )", "CompoundProcedure (_ . y, <procedure-env>)"},
+        {{"Definition ( rest : Lambda )", "CompoundProcedure (_ . y, (Sequence: y), <procedure-env>)"},
          {"(App:rest 1 2 3)", "(2 3)"}};
 
     Lexer lex("(define rest (lambda (_ . y) y)) (rest 1 2 3)");
@@ -451,7 +455,7 @@ TEST(Parser, Application)
 
 TEST(Parser, Application2)
 {
-    std::initializer_list<std::pair<std::string, std::string> > expected = {{"Definition ( i : Lambda )", "CompoundProcedure (x, <procedure-env>)"},
+    std::initializer_list<std::pair<std::string, std::string> > expected = {{"Definition ( i : Lambda )", "CompoundProcedure (x, (Sequence: x), <procedure-env>)"},
                                                                    {"(App:i \".\")", "\".\""}};
 
     Lexer lex("(define i (lambda (x) x)) (i \".\")");

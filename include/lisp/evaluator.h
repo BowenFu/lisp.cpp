@@ -596,6 +596,7 @@ public:
                     o << ", ";
                 }
             }
+            o << mBody->toString() << ", ";
             o << "<procedure-env>)";
             return o.str();
         }
