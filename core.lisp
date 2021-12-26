@@ -122,6 +122,14 @@
         (expand-clauses clauses)
     ))
 
+(define delay (macro (action)
+   `(lambda () ,action))
+)
+
+(define force (macro (delayed)
+    `(,delayed))
+)
+
 (define atom?
     (lambda (x)
     (and (not (pair? x)) (not (null? x)))))

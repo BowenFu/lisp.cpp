@@ -1,6 +1,6 @@
 # lisp.cpp
 
-lisp : a simple computer algebra system in C++
+lisp : a simple lisp interpreter in C++ with scheme style syntax + quote / unquote style macros.
 
 <!-- ![lisp](./lisp.svg) -->
 
