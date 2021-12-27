@@ -22,11 +22,59 @@ void Compiler::compile(ExprPtr const& expr)
         auto const index = mCode.constantPool.size();
         mCode.constantPool.push_back(numPtr->get());
         mCode.instructions.push_back(kCONST);
-        // todo: refactor
         auto bytes = integerToFourBytes(index);
         for (Byte i : bytes)
         {
             mCode.instructions.push_back(i);
+        }
+        return;
+    }
+    if (auto boolPtr = dynamic_cast<Bool const*>(exprPtr))
+    {
+        mCode.instructions.push_back(kICONST);
+        auto bytes = integerToFourBytes(boolPtr->get());
+        for (Byte i : bytes)
+        {
+            mCode.instructions.push_back(i);
+        }
+        return;
+    }
+    if (auto ifPtr = dynamic_cast<If const*>(exprPtr))
+    {
+        compile(ifPtr->mPredicate);
+        mCode.instructions.push_back(kJUMP_IF_NOT_TRUE);
+        // jump to alternative
+        auto const jump0OperandIndex = mCode.instructions.size();
+        for (size_t i = 0; i < 4; ++i)
+        {
+            mCode.instructions.push_back(0);
+        }
+        compile(ifPtr->mConsequent);
+        mCode.instructions.push_back(kJUMP);
+        // jump to post alternative
+        auto const jump1OperandIndex = mCode.instructions.size();
+        for (size_t i = 0; i < 4; ++i)
+        {
+            mCode.instructions.push_back(0);
+        }
+        // update jump0
+        {
+            auto const alterPos = mCode.instructions.size();
+            auto bytes = integerToFourBytes(alterPos);
+            for (size_t i = 0; i < 4; ++i)
+            {
+                mCode.instructions.at(jump0OperandIndex + i) = bytes[i];
+            }
+        }
+        compile(ifPtr->mAlternative);
+        // update jump1
+        {
+            auto const postAlterPos = mCode.instructions.size();
+            auto bytes = integerToFourBytes(postAlterPos);
+            for (size_t i = 0; i < 4; ++i)
+            {
+                mCode.instructions.at(jump1OperandIndex + i) = bytes[i];
+            }
         }
         return;
     }
@@ -42,8 +90,8 @@ void Compiler::compile(ExprPtr const& expr)
             }
             else if (opName == "-")
             {
-                ASSERT(nbOperands == 2U);
-                return kSUB;
+                ASSERT(nbOperands == 2U || nbOperands == 1U);
+                return nbOperands == 2U ? kSUB : kMINUS;
             }
             else if (opName == "*")
             {
@@ -54,8 +102,34 @@ void Compiler::compile(ExprPtr const& expr)
                 ASSERT(nbOperands == 2U);
                 return kDIV;
             }
+            else if (opName == "==")
+            {
+                ASSERT(nbOperands == 2U);
+                return kEQUAL;
+            }
+            else if (opName == "!=")
+            {
+                ASSERT(nbOperands == 2U);
+                return kNOT_EQUAL;
+            }
+            else if (opName == ">")
+            {
+                ASSERT(nbOperands == 2U);
+                return kGREATER_THAN;
+            }
+            else if (opName == "!")
+            {
+                ASSERT(nbOperands == 1U);
+                return kNOT;
+            }
             FAIL_("Not supported yet!");
         }();
+        if (nbOperands == 1)
+        {
+            compile(appPtr->mOperands.at(0));
+            mCode.instructions.push_back(opCode);
+            return;
+        }
         compile(appPtr->mOperands.at(0));
         for (auto i = 1U; i < nbOperands; ++i)
         {
@@ -64,4 +138,5 @@ void Compiler::compile(ExprPtr const& expr)
         }
         return;
     }
+    FAIL_("Not supported yet!");
 }
