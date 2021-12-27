@@ -11,6 +11,8 @@
 #include <functional>
 #include <variant>
 
+class Compiler;
+
 class Expr;
 using ExprPtr = std::shared_ptr<Expr>;
 class Env;
@@ -135,7 +137,7 @@ public:
     virtual std::string toString() const = 0;
     virtual bool equalTo(ExprPtr const&) const
     {
-        FAIL("Not implemented");
+        FAIL_("Not implemented");
     }
     virtual ~Expr() = default;
 };
@@ -197,7 +199,7 @@ public:
     }
     ExprPtr eval(std::shared_ptr<Env> const& /* env */) override
     {
-        FAIL("RawWord should never be evaluated!");
+        FAIL_("RawWord should never be evaluated!");
     }
     std::string toString() const override
     {
@@ -635,6 +637,7 @@ public:
 
 class Application final : public Expr
 {
+    friend Compiler;
     ExprPtr mOperator;
     std::vector<ExprPtr> mOperands;
 public:

@@ -1,3 +1,6 @@
+#ifndef LISP_VM_H
+#define LISP_VM_H
+
 #include <cstdint>
 #include <vector>
 #include <stack>
@@ -6,11 +9,15 @@
 
 using Byte = uint8_t;
 
-enum Instruction
+enum OpCode : Byte
 {
     kICONST,
     kIADD,
-    kSCONST,
+    kADD,
+    kSUB,
+    kMUL,
+    kDIV,
+    kCONST,
     kHALT,
     kPRINT,
     kCALL,
@@ -51,7 +58,7 @@ public:
     }
 };
 
-using Object = std::variant<int32_t, float, std::string, FunctionSymbol>;
+using Object = std::variant<int32_t, double, std::string, FunctionSymbol>;
 
 class VM;
 
@@ -81,12 +88,20 @@ public:
     }
 };
 
+using Instructions = std::vector<Byte>;
+
+class ByteCode
+{
+public:
+    Instructions instructions{};
+    std::vector<Object> constantPool{};
+};
+
 class VM
 {
 public:
-    VM(std::vector<Byte> const& code, std::vector<Object> const& constantPool = {})
+    VM(ByteCode const& code)
     : mCode{code}
-    , mConstantPool{constantPool}
     {}
     void run();
     auto peekOperandStack() const
@@ -98,8 +113,7 @@ public:
         return mOperands;
     }
 private:
-    std::vector<Byte> mCode{};
-    std::vector<Object> mConstantPool{};
+    ByteCode mCode{};
     size_t mIp{};
     std::stack<Object> mOperands{};
     std::stack<StackFrame> mCallStack{};
@@ -110,3 +124,5 @@ auto fourBytesToInteger(Byte const* buffer) -> T
 {
     return static_cast<T>(buffer[0] << 24 | buffer[1] << 16 | buffer[2] << 8 | buffer[3]);
 }
+
+#endif // LISP_VM_H
