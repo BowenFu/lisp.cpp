@@ -1,4 +1,5 @@
 #include "lisp/compiler.h"
+#include <array>
 
 auto integerToFourBytes(size_t num) -> std::array<Byte, 4>
 {
