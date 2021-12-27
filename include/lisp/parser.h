@@ -358,11 +358,11 @@ inline auto atomicToQuoted(ExprPtr const& expr)
     }
     if (dynamic_cast<Variable const*>(expr.get()))
     {
-        FAIL("Variable should not appear as atomic!");
+        FAIL_("Variable should not appear as atomic!");
     }
     if (dynamic_cast<Symbol const*>(expr.get()))
     {
-        FAIL("Symbol should not appear as atomic!");
+        FAIL_("Symbol should not appear as atomic!");
     }
     return expr;
 }

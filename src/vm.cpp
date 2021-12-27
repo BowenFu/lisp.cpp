@@ -1,4 +1,5 @@
 #include "lisp/vm.h"
+#include "lisp/meta.h"
 #include <iostream>
 
 std::ostream& operator << (std::ostream& o, StackFrame const& f)
@@ -13,15 +14,15 @@ std::ostream& operator << (std::ostream& o, FunctionSymbol const& f)
 
 void VM::run()
 {
-    while (mIp < mCode.size())
+    while (mIp < mCode.instructions.size())
     {
-        Byte bytecode = mCode[mIp];
+        Byte opCode = mCode.instructions[mIp];
         ++mIp;
-        switch (bytecode)
+        switch (opCode)
         {
         case kICONST:
         {
-            int32_t word = fourBytesToInteger<int32_t>(&mCode[mIp]);
+            int32_t word = fourBytesToInteger<int32_t>(&mCode.instructions[mIp]);
             mIp += 4;
             operandStack().push(word);
             break;
@@ -36,11 +37,54 @@ void VM::run()
             operandStack().push(result);
             break;
         }
-        case kSCONST:
+        case kADD:
+        case kSUB:
+        case kMUL:
+        case kDIV:
         {
-            uint32_t index = fourBytesToInteger<uint32_t>(&mCode[mIp]);
+            auto const rhs = operandStack().top();
+            operandStack().pop();
+            auto const lhs = operandStack().top();
+            operandStack().pop();
+            if (auto lhsDPtr = std::get_if<double>(&lhs))
+            {
+                auto lhsD = *lhsDPtr;
+                auto rhsD = std::get<double>(rhs);
+                double result{};
+                switch (opCode)
+                {
+                case kADD:
+                    result = lhsD + rhsD;
+                    break;
+                
+                case kSUB:
+                    result = lhsD - rhsD;
+                    break;
+                
+                case kMUL:
+                    result = lhsD * rhsD;
+                    break;
+                
+                case kDIV:
+                    result = lhsD / rhsD;
+                    break;
+                
+                default:
+                    break;
+                }
+                operandStack().push(result);
+            }
+            else
+            {
+                FAIL_("Not supported yet!");
+            }
+            break;
+        }
+        case kCONST:
+        {
+            uint32_t index = fourBytesToInteger<uint32_t>(&mCode.instructions[mIp]);
             mIp += 4;
-            operandStack().push(mConstantPool.at(index));
+            operandStack().push(mCode.constantPool.at(index));
             break;
         }
         case kPRINT:
@@ -57,10 +101,10 @@ void VM::run()
             return;
         case kCALL:
         {
-            uint32_t index = fourBytesToInteger<uint32_t>(&mCode[mIp]);
+            uint32_t index = fourBytesToInteger<uint32_t>(&mCode.instructions[mIp]);
             mIp += 4;
 
-            auto const& functionSymbol = std::get<FunctionSymbol>(mConstantPool.at(index));
+            auto const& functionSymbol = std::get<FunctionSymbol>(mCode.constantPool.at(index));
             std::vector<Object> params(functionSymbol.nbArgs() + functionSymbol.nbLocals());
             for (size_t i = functionSymbol.nbArgs(); i > 0; --i)
             {
@@ -79,7 +123,7 @@ void VM::run()
         }
         case kLOAD:
         {
-            uint32_t index = fourBytesToInteger<uint32_t>(&mCode[mIp]);
+            uint32_t index = fourBytesToInteger<uint32_t>(&mCode.instructions[mIp]);
             mIp += 4;
 
             operandStack().push(mCallStack.top().locals(index));
@@ -87,7 +131,7 @@ void VM::run()
         }
         case kSTORE:
         {
-            uint32_t index = fourBytesToInteger<uint32_t>(&mCode[mIp]);
+            uint32_t index = fourBytesToInteger<uint32_t>(&mCode.instructions[mIp]);
             mIp += 4;
 
             mCallStack.top().locals(index) = operandStack().top();

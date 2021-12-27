@@ -1,6 +1,7 @@
 add_executable(unittests
 test.cpp
 testVm.cpp
+testCompiler.cpp
 )
 target_include_directories(unittests PRIVATE
   ${PROJECT_SOURCE_DIR}/src)

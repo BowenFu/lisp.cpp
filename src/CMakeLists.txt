@@ -4,6 +4,7 @@ target_include_directories(lisp PUBLIC
 target_sources(lisp PRIVATE
 evaluator.cpp
 vm.cpp
+compiler.cpp
 )
 
 target_compile_options(lisp PRIVATE ${BASE_COMPILE_FLAGS})

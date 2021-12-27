@@ -72,7 +72,7 @@ public:
                 return false_();
             
             default:
-                FAIL("Not implemented yet!");
+                FAIL_("Not implemented yet!");
                 break;
             }
             return true_();
