@@ -414,6 +414,7 @@ inline bool isTrue(ExprPtr expr)
 
 class If final : public Expr
 {
+    friend Compiler;
     ExprPtr mPredicate;
     ExprPtr mConsequent;
     ExprPtr mAlternative;

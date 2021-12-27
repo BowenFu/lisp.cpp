@@ -24,6 +24,15 @@ enum OpCode : Byte
     kRET,
     kLOAD,
     kSTORE,
+    kTRUE,
+    kFALSE,
+    kEQUAL,
+    kNOT_EQUAL,
+    kGREATER_THAN,
+    kNOT,
+    kMINUS,
+    kJUMP,
+    kJUMP_IF_NOT_TRUE,
 };
 
 

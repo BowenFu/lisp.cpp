@@ -41,6 +41,9 @@ void VM::run()
         case kSUB:
         case kMUL:
         case kDIV:
+        case kEQUAL:
+        case kNOT_EQUAL:
+        case kGREATER_THAN:
         {
             auto const rhs = operandStack().top();
             operandStack().pop();
@@ -50,34 +53,79 @@ void VM::run()
             {
                 auto lhsD = *lhsDPtr;
                 auto rhsD = std::get<double>(rhs);
-                double result{};
                 switch (opCode)
                 {
                 case kADD:
-                    result = lhsD + rhsD;
+                {
+                    double result = lhsD + rhsD;
+                    operandStack().push(result);
                     break;
+                }
                 
                 case kSUB:
-                    result = lhsD - rhsD;
+                {
+                    double result = lhsD - rhsD;
+                    operandStack().push(result);
                     break;
+                }
                 
                 case kMUL:
-                    result = lhsD * rhsD;
+                {
+                    double result = lhsD * rhsD;
+                    operandStack().push(result);
                     break;
+                }
                 
                 case kDIV:
-                    result = lhsD / rhsD;
+                {
+                    double result = lhsD / rhsD;
+                    operandStack().push(result);
                     break;
+                }
                 
+                case kEQUAL:
+                {
+                    bool result = lhsD == rhsD;
+                    operandStack().push(result);
+                    break;
+                }
+
+                case kNOT_EQUAL:
+                {
+                    bool result = lhsD != rhsD;
+                    operandStack().push(result);
+                    break;
+                }
+
+                case kGREATER_THAN:
+                {
+                    bool result = lhsD > rhsD;
+                    operandStack().push(result);
+                    break;
+                }
+
                 default:
                     break;
                 }
-                operandStack().push(result);
             }
             else
             {
                 FAIL_("Not supported yet!");
             }
+            break;
+        }
+        case kNOT:
+        {
+            auto num = std::get<int32_t>(operandStack().top());
+            operandStack().pop();
+            operandStack().push(!num);
+            break;
+        }
+        case kMINUS:
+        {
+            auto num = std::get<double>(operandStack().top());
+            operandStack().pop();
+            operandStack().push(-num);
             break;
         }
         case kCONST:
@@ -93,7 +141,7 @@ void VM::run()
             operandStack().pop();
             std::visit([](auto op)
             {
-                std::cout << op << std::endl;
+                std::cout << std::boolalpha << op << std::endl;
             }, op);
             break;
         }
@@ -136,6 +184,37 @@ void VM::run()
 
             mCallStack.top().locals(index) = operandStack().top();
             operandStack().pop();
+            break;
+        }
+        case kTRUE:
+        {
+            operandStack().push(true);
+            break;
+        }
+        case kFALSE:
+        {
+            operandStack().push(false);
+            break;
+        }
+        case kJUMP:
+        {
+            uint32_t index = fourBytesToInteger<uint32_t>(&mCode.instructions[mIp]);
+            mIp = index;
+            break;
+        }
+        case kJUMP_IF_NOT_TRUE:
+        {
+            auto pred = std::get<int32_t>(operandStack().top());
+            operandStack().pop();
+            if (!pred)
+            {
+                uint32_t index = fourBytesToInteger<uint32_t>(&mCode.instructions[mIp]);
+                mIp = index;
+            }
+            else
+            {
+                mIp += 4;
+            }
             break;
         }
         }
