@@ -23,7 +23,7 @@ void Compiler::compile(ExprPtr const& expr)
         mCode.instructions.push_back(kCONST);
         // todo: refactor
         auto bytes = integerToFourBytes(index);
-        for (auto i : bytes)
+        for (Byte i : bytes)
         {
             mCode.instructions.push_back(i);
         }
