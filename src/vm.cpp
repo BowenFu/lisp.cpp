@@ -169,7 +169,7 @@ void VM::run()
             mCallStack.pop();
             break;
         }
-        case kLOAD:
+        case kGET_LOCAL:
         {
             uint32_t index = fourBytesToInteger<uint32_t>(&mCode.instructions[mIp]);
             mIp += 4;
@@ -177,7 +177,7 @@ void VM::run()
             operandStack().push(mCallStack.top().locals(index));
             break;
         }
-        case kSTORE:
+        case kSET_LOCAL:
         {
             uint32_t index = fourBytesToInteger<uint32_t>(&mCode.instructions[mIp]);
             mIp += 4;
