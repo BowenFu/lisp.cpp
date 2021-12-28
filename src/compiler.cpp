@@ -115,6 +115,33 @@ void Compiler::compile(ExprPtr const& expr)
         }
         return;
     }
+    if (auto seqPtr = dynamic_cast<Sequence const*>(exprPtr))
+    {
+        for (auto const& e : seqPtr->mActions)
+        {
+            compile(e);
+            mCode.instructions.push_back(kPOP);
+        }
+        mCode.instructions.resize(mCode.instructions.size() - 1);
+        return;
+    }
+    if (auto lambdaPtr = dynamic_cast<LambdaBase<CompoundProcedure> const*>(exprPtr))
+    {
+        auto const index = mCode.constantPool.size();
+        auto const nbArgs = std::get_if<std::string>(&lambdaPtr->mArguments) ? 1 : std::get_if<1>(&lambdaPtr->mArguments)->first.size();
+        auto const funcSym = FunctionSymbol{"unnamed", nbArgs, /* nbLocals= */ 0, mCode.instructions.size()};
+        mCode.constantPool.push_back(funcSym);
+        mCode.instructions.push_back(kCONST);
+        auto bytes = integerToFourBytes(index);
+        for (Byte i : bytes)
+        {
+            mCode.instructions.push_back(i);
+        }
+        // FIXME: find a place for function def.
+        compile(lambdaPtr->mBody);
+        mCode.instructions.push_back(kRET);
+        return;
+    }
     if (auto appPtr = dynamic_cast<Application const*>(exprPtr))
     {
         auto nbOperands = appPtr->mOperands.size();

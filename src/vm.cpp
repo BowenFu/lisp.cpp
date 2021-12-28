@@ -240,6 +240,11 @@ void VM::run()
             operandStack().push(mGlobals.at(index));
             break;
         }
+        case kPOP:
+        {
+            operandStack().pop();
+            break;
+        }
         }
     }
 }

@@ -35,6 +35,7 @@ enum OpCode : Byte
     kJUMP_IF_NOT_TRUE,
     kSET_GLOBAL,
     kGET_GLOBAL,
+    kPOP,
 };
 
 
