@@ -390,8 +390,9 @@ class Macro;
 
 class Definition final : public Expr
 {
+    friend Compiler;
     std::string mVariableName;
-    std::shared_ptr<Expr> mValue;
+    ExprPtr mValue;
 public:
     Definition(std::string const& varName, std::shared_ptr<Expr> value)
     : mVariableName{varName}
@@ -436,6 +437,7 @@ public:
 
 class Sequence final : public Expr
 {
+    friend Compiler;
     std::vector<ExprPtr> mActions;
 public:
     Sequence(std::vector<ExprPtr> actions)
@@ -465,17 +467,18 @@ public:
 template <typename ProcedureT>
 class LambdaBase : public Expr
 {
-    Params mParameters;
+    friend Compiler;
+    Params mArguments;
     std::shared_ptr<Sequence> mBody;
 public:
-    LambdaBase(Params const& params, std::shared_ptr<Sequence> body)
-    : mParameters{params}
+    LambdaBase(Params const& arguments, std::shared_ptr<Sequence> body)
+    : mArguments{arguments}
     , mBody{body}
     {
     }
     ExprPtr eval(std::shared_ptr<Env> const& env) override
     {
-        return std::shared_ptr<Expr>{new ProcedureT{mBody, mParameters, env}};
+        return std::shared_ptr<Expr>{new ProcedureT{mBody, mArguments, env}};
     }
 };
 
@@ -551,13 +554,13 @@ public:
 class CompoundProcedureBase : public Procedure, public std::enable_shared_from_this<CompoundProcedureBase>
 {
     std::shared_ptr<Sequence> mBody;
-    Params mParameters;
+    Params mArguments;
     std::shared_ptr<Env> mEnvironment;
     virtual std::string getClassName() const = 0;
 public:
     CompoundProcedureBase(std::shared_ptr<Sequence> body, Params const& parameters, std::shared_ptr<Env> const& environment)
     : mBody{body}
-    , mParameters{parameters}
+    , mArguments{parameters}
     , mEnvironment{environment}
     {}
     ExprPtr eval(std::shared_ptr<Env> const& /* env */) override
@@ -566,19 +569,19 @@ public:
     }
     std::shared_ptr<Expr> apply(std::vector<std::shared_ptr<Expr>> const& args) override
     {
-        return mBody->eval(mEnvironment->extend(mParameters, args));
+        return mBody->eval(mEnvironment->extend(mArguments, args));
     }
     std::string toString() const override
     {
             std::ostringstream o;
             o << getClassName() << " (";
-            if (auto s = std::get_if<std::string>(&mParameters))
+            if (auto s = std::get_if<std::string>(&mArguments))
             {
                 o << ". " << *s << ", ";
             }
             else 
             {
-                auto paramsAndVariadic = std::get_if<1>(&mParameters);
+                auto paramsAndVariadic = std::get_if<1>(&mArguments);
                 ASSERT(paramsAndVariadic);
                 auto const& params = paramsAndVariadic->first; 
                 auto const variadic = paramsAndVariadic->second; 

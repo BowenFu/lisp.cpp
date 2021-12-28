@@ -15,6 +15,19 @@ TEST(Compiler, number)
     EXPECT_EQ(output, "5.5\n");
 }
 
+TEST(Compiler, string)
+{
+    Compiler c{};
+    c.compile(ExprPtr{new String{"5.5 abcdefg"}});
+    ByteCode code = c.code();
+    code.instructions.push_back(kPRINT);
+    VM vm{code};
+    testing::internal::CaptureStdout();
+    vm.run();
+    std::string output = testing::internal::GetCapturedStdout();
+    EXPECT_EQ(output, "5.5 abcdefg\n");
+}
+
 TEST(Compiler, add)
 {
     Compiler c{};
@@ -91,6 +104,24 @@ TEST(Compiler, if)
     ExprPtr comp{new Application{op, {num1, num2}}};
     ExprPtr max{new If{comp, num1, num2}};
     c.compile(max);
+    ByteCode code = c.code();
+    code.instructions.push_back(kPRINT);
+    VM vm{code};
+    testing::internal::CaptureStdout();
+    vm.run();
+    std::string output = testing::internal::GetCapturedStdout();
+    EXPECT_EQ(output, "5.5\n");
+}
+
+TEST(Compiler, definition)
+{
+    Compiler c{};
+    ExprPtr num{new Number{5.5}};
+    auto const name = "num";
+    ExprPtr def{new Definition{name, num}};
+    c.compile(def);
+    ExprPtr var{new Variable{name}};
+    c.compile(var);
     ByteCode code = c.code();
     code.instructions.push_back(kPRINT);
     VM vm{code};

@@ -29,10 +29,47 @@ void Compiler::compile(ExprPtr const& expr)
         }
         return;
     }
+    if (auto strPtr = dynamic_cast<String const*>(exprPtr))
+    {
+        auto const index = mCode.constantPool.size();
+        mCode.constantPool.push_back(strPtr->get());
+        mCode.instructions.push_back(kCONST);
+        auto bytes = integerToFourBytes(index);
+        for (Byte i : bytes)
+        {
+            mCode.instructions.push_back(i);
+        }
+        return;
+    }
     if (auto boolPtr = dynamic_cast<Bool const*>(exprPtr))
     {
         mCode.instructions.push_back(kICONST);
         auto bytes = integerToFourBytes(boolPtr->get());
+        for (Byte i : bytes)
+        {
+            mCode.instructions.push_back(i);
+        }
+        return;
+    }
+    if (auto defPtr = dynamic_cast<Definition const*>(exprPtr))
+    {
+        compile(defPtr->mValue);
+        mCode.instructions.push_back(kSET_GLOBAL);
+        auto index = mSymbolTable->symbolTable.size();
+        mSymbolTable->symbolTable.insert({defPtr->mVariableName, {defPtr->mValue, index}});
+        auto bytes = integerToFourBytes(index);
+        for (Byte i : bytes)
+        {
+            mCode.instructions.push_back(i);
+        }
+        return;
+    }
+    if (auto variablePtr = dynamic_cast<Variable const*>(exprPtr))
+    {
+        auto const name = variablePtr->name();
+        auto index = mSymbolTable->symbolTable.at(name).second;
+        mCode.instructions.push_back(kGET_GLOBAL);
+        auto bytes = integerToFourBytes(index);
         for (Byte i : bytes)
         {
             mCode.instructions.push_back(i);
@@ -76,6 +113,33 @@ void Compiler::compile(ExprPtr const& expr)
                 mCode.instructions.at(jump1OperandIndex + i) = bytes[i];
             }
         }
+        return;
+    }
+    if (auto seqPtr = dynamic_cast<Sequence const*>(exprPtr))
+    {
+        for (auto const& e : seqPtr->mActions)
+        {
+            compile(e);
+            mCode.instructions.push_back(kPOP);
+        }
+        mCode.instructions.resize(mCode.instructions.size() - 1);
+        return;
+    }
+    if (auto lambdaPtr = dynamic_cast<LambdaBase<CompoundProcedure> const*>(exprPtr))
+    {
+        auto const index = mCode.constantPool.size();
+        auto const nbArgs = std::get_if<std::string>(&lambdaPtr->mArguments) ? 1 : std::get_if<1>(&lambdaPtr->mArguments)->first.size();
+        auto const funcSym = FunctionSymbol{"unnamed", nbArgs, /* nbLocals= */ 0, mCode.instructions.size()};
+        mCode.constantPool.push_back(funcSym);
+        mCode.instructions.push_back(kCONST);
+        auto bytes = integerToFourBytes(index);
+        for (Byte i : bytes)
+        {
+            mCode.instructions.push_back(i);
+        }
+        // FIXME: find a place for function def.
+        compile(lambdaPtr->mBody);
+        mCode.instructions.push_back(kRET);
         return;
     }
     if (auto appPtr = dynamic_cast<Application const*>(exprPtr))
