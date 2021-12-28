@@ -217,6 +217,29 @@ void VM::run()
             }
             break;
         }
+        case kSET_GLOBAL:
+        {
+            auto value = operandStack().top();
+            operandStack().pop();
+            uint32_t index = fourBytesToInteger<uint32_t>(&mCode.instructions[mIp]);
+            mIp += 4;
+            if (mGlobals.size() == index)
+            {
+                mGlobals.push_back(value);
+            }
+            else
+            {
+                mGlobals.at(index) = value;
+            }
+            break;
+        }
+        case kGET_GLOBAL:
+        {
+            uint32_t index = fourBytesToInteger<uint32_t>(&mCode.instructions[mIp]);
+            mIp += 4;
+            operandStack().push(mGlobals.at(index));
+            break;
+        }
         }
     }
 }

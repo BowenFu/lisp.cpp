@@ -39,6 +39,31 @@ void Compiler::compile(ExprPtr const& expr)
         }
         return;
     }
+    if (auto defPtr = dynamic_cast<Definition const*>(exprPtr))
+    {
+        compile(defPtr->mValue);
+        mCode.instructions.push_back(kSET_GLOBAL);
+        auto index = mSymbolTable.size();
+        mSymbolTable.insert({defPtr->mVariableName, {defPtr->mValue, index}});
+        auto bytes = integerToFourBytes(index);
+        for (Byte i : bytes)
+        {
+            mCode.instructions.push_back(i);
+        }
+        return;
+    }
+    if (auto variablePtr = dynamic_cast<Variable const*>(exprPtr))
+    {
+        auto const name = variablePtr->name();
+        auto index = mSymbolTable.at(name).second;
+        mCode.instructions.push_back(kGET_GLOBAL);
+        auto bytes = integerToFourBytes(index);
+        for (Byte i : bytes)
+        {
+            mCode.instructions.push_back(i);
+        }
+        return;
+    }
     if (auto ifPtr = dynamic_cast<If const*>(exprPtr))
     {
         compile(ifPtr->mPredicate);

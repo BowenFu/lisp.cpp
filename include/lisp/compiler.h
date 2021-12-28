@@ -6,7 +6,7 @@
 
 class Compiler
 {
-    Env mEnv{};
+    std::map<std::string, std::pair<ExprPtr, size_t>> mSymbolTable;
     ByteCode mCode{};
 public:
     Compiler() = default;

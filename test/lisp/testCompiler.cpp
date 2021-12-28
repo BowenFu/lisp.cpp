@@ -99,3 +99,21 @@ TEST(Compiler, if)
     std::string output = testing::internal::GetCapturedStdout();
     EXPECT_EQ(output, "5.5\n");
 }
+
+TEST(Compiler, definition)
+{
+    Compiler c{};
+    ExprPtr num{new Number{5.5}};
+    auto const name = "num";
+    ExprPtr def{new Definition{name, num}};
+    c.compile(def);
+    ExprPtr var{new Variable{name}};
+    c.compile(var);
+    ByteCode code = c.code();
+    code.instructions.push_back(kPRINT);
+    VM vm{code};
+    testing::internal::CaptureStdout();
+    vm.run();
+    std::string output = testing::internal::GetCapturedStdout();
+    EXPECT_EQ(output, "5.5\n");
+}

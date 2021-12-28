@@ -390,8 +390,9 @@ class Macro;
 
 class Definition final : public Expr
 {
+    friend Compiler;
     std::string mVariableName;
-    std::shared_ptr<Expr> mValue;
+    ExprPtr mValue;
 public:
     Definition(std::string const& varName, std::shared_ptr<Expr> value)
     : mVariableName{varName}

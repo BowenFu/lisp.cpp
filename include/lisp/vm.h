@@ -33,6 +33,8 @@ enum OpCode : Byte
     kMINUS,
     kJUMP,
     kJUMP_IF_NOT_TRUE,
+    kSET_GLOBAL,
+    kGET_GLOBAL
 };
 
 
@@ -124,6 +126,7 @@ public:
 private:
     ByteCode mCode{};
     size_t mIp{};
+    std::vector<Object> mGlobals{};
     std::stack<Object> mOperands{};
     std::stack<StackFrame> mCallStack{};
 };
