@@ -15,6 +15,19 @@ TEST(Compiler, number)
     EXPECT_EQ(output, "5.5\n");
 }
 
+TEST(Compiler, string)
+{
+    Compiler c{};
+    c.compile(ExprPtr{new String{"5.5 abcdefg"}});
+    ByteCode code = c.code();
+    code.instructions.push_back(kPRINT);
+    VM vm{code};
+    testing::internal::CaptureStdout();
+    vm.run();
+    std::string output = testing::internal::GetCapturedStdout();
+    EXPECT_EQ(output, "5.5 abcdefg\n");
+}
+
 TEST(Compiler, add)
 {
     Compiler c{};

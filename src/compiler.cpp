@@ -29,6 +29,18 @@ void Compiler::compile(ExprPtr const& expr)
         }
         return;
     }
+    if (auto strPtr = dynamic_cast<String const*>(exprPtr))
+    {
+        auto const index = mCode.constantPool.size();
+        mCode.constantPool.push_back(strPtr->get());
+        mCode.instructions.push_back(kCONST);
+        auto bytes = integerToFourBytes(index);
+        for (Byte i : bytes)
+        {
+            mCode.instructions.push_back(i);
+        }
+        return;
+    }
     if (auto boolPtr = dynamic_cast<Bool const*>(exprPtr))
     {
         mCode.instructions.push_back(kICONST);
