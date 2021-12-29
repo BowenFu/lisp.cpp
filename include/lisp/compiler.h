@@ -3,6 +3,7 @@
 
 #include "vm.h"
 #include "evaluator.h"
+#include <optional>
 
 class Compiler
 {
