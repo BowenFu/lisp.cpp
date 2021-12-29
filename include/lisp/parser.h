@@ -45,7 +45,8 @@ inline Params parseParams(ExprPtr const& expr)
     auto me = expr;
     if (auto e = dynamic_cast<RawWord*>(me.get()))
     {
-        return e->get();
+        params.push_back(e->get());
+        return std::make_pair(params, true);
     }
     while (me != nil())
     {

@@ -151,7 +151,6 @@ TEST(Compiler, lambda0)
     EXPECT_EQ(output, "Function getNum\n");
 }
 
-#if 0
 TEST(Compiler, lambda1)
 {
     Compiler c{};
@@ -172,4 +171,3 @@ TEST(Compiler, lambda1)
     std::string output = testing::internal::GetCapturedStdout();
     EXPECT_EQ(output, "Function identity\n");
 }
-#endif 

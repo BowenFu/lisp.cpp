@@ -20,7 +20,7 @@ class Env;
 class Variable;
 
 // bool : variadic
-using Params = std::variant<std::string, std::pair<std::vector<std::string>, bool>>;
+using Params = std::pair<std::vector<std::string>, bool>;
 
 template <typename Iter>
 ExprPtr reverseVecToCons(Iter begin, Iter end);
@@ -90,38 +90,29 @@ public:
     std::shared_ptr<Env> extend(Params const& parameters, std::vector<ExprPtr> const& arguments)
     {
         std::map<std::string, ExprPtr> frame;
-        if (auto s = std::get_if<std::string>(&parameters))
+        auto const& params = parameters.first; 
+        auto const variadic = parameters.second; 
+        if (variadic)
         {
-            frame.insert({*s, reverseVecToCons(arguments.rbegin(), arguments.rend())});
+            ASSERT(params.size() <= arguments.size() + 1);
         }
         else
         {
-            auto paramsAndVariadic = std::get_if<1>(&parameters);
-            ASSERT(paramsAndVariadic);
-            auto const& params = paramsAndVariadic->first; 
-            auto const variadic = paramsAndVariadic->second; 
+            ASSERT(params.size() == arguments.size());
+        }
+        if (!params.empty())
+        {
+            for (size_t i = 0; i < params.size() - 1; ++i)
+            {
+                frame.insert({params.at(i), arguments.at(i)});
+            }
             if (variadic)
             {
-                ASSERT(params.size() <= arguments.size());
+                frame.insert({params.back(), reverseVecToCons(arguments.rbegin(), arguments.rend() - static_cast<long>(params.size()) + 1)});
             }
             else
             {
-                ASSERT(params.size() == arguments.size());
-            }
-            if (!params.empty())
-            {
-                for (size_t i = 0; i < params.size() - 1; ++i)
-                {
-                    frame.insert({params.at(i), arguments.at(i)});
-                }
-                if (variadic)
-                {
-                    frame.insert({params.back(), reverseVecToCons(arguments.rbegin(), arguments.rend() - static_cast<long>(params.size()) + 1)});
-                }
-                else
-                {
-                    frame.insert({params.back(), arguments.back()});
-                }
+                frame.insert({params.back(), arguments.back()});
             }
         }
 
@@ -575,32 +566,23 @@ public:
     {
             std::ostringstream o;
             o << getClassName() << " (";
-            if (auto s = std::get_if<std::string>(&mArguments))
+            auto const& params = mArguments.first; 
+            auto const variadic = mArguments.second; 
+            if (!params.empty())
             {
-                o << ". " << *s << ", ";
-            }
-            else 
-            {
-                auto paramsAndVariadic = std::get_if<1>(&mArguments);
-                ASSERT(paramsAndVariadic);
-                auto const& params = paramsAndVariadic->first; 
-                auto const variadic = paramsAndVariadic->second; 
-                if (!params.empty())
+                for (auto i = params.begin(); i != std::prev(params.end()); ++i)
                 {
-                    for (auto i = params.begin(); i != std::prev(params.end()); ++i)
-                    {
-                        o << *i << " ";
-                    }
-                    if (variadic)
-                    {
-                        o << ". ";
-                    }
-                    if (params.size() >= 1)
-                    {
-                        o << params.back();
-                    }
-                    o << ", ";
+                    o << *i << " ";
                 }
+                if (variadic)
+                {
+                    o << ". ";
+                }
+                if (params.size() >= 1)
+                {
+                    o << params.back();
+                }
+                o << ", ";
             }
             o << mBody->toString() << ", ";
             o << "<procedure-env>)";
