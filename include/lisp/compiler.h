@@ -36,12 +36,13 @@ class Compiler
         auto const idx = mSymbolTable.at(name);
         return {idx, Scope::kGLOBAL};
     }
-    Scope define(std::string const& name)
+    std::pair<size_t, Scope> define(std::string const& name)
     {
         auto& map = mFunc ? mFunc.value().second : mSymbolTable;
         auto const idx = map.size();
         map[name] = idx;
-        return mFunc ? Scope::kLOCAL : Scope::kGLOBAL;
+        auto const scope = mFunc ? Scope::kLOCAL : Scope::kGLOBAL;
+        return {idx, scope};
     }
 public:
     Compiler() = default;

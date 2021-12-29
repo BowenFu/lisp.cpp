@@ -58,9 +58,9 @@ void Compiler::compile(ExprPtr const& expr)
         {
             funcSymPtr->setName(defPtr->mVariableName);
         }
-        instructions().push_back(kSET_GLOBAL);
-        auto index = mSymbolTable.size();
-        mSymbolTable.insert({defPtr->mVariableName, index});
+        auto [index, scope] = define(defPtr->mVariableName);
+        auto setIns = scope == Scope::kLOCAL ? kSET_LOCAL : kSET_GLOBAL;
+        instructions().push_back(setIns);
         auto bytes = integerToFourBytes(index);
         for (Byte i : bytes)
         {
@@ -71,8 +71,9 @@ void Compiler::compile(ExprPtr const& expr)
     if (auto variablePtr = dynamic_cast<Variable const*>(exprPtr))
     {
         auto const name = variablePtr->name();
-        auto index = mSymbolTable.at(name);
-        instructions().push_back(kGET_GLOBAL);
+        auto [index, scope] = getIndex(name);
+        auto getIns = scope == Scope::kLOCAL ? kGET_LOCAL : kGET_GLOBAL;
+        instructions().push_back(getIns);
         auto bytes = integerToFourBytes(index);
         for (Byte i : bytes)
         {
@@ -133,14 +134,18 @@ void Compiler::compile(ExprPtr const& expr)
     {
         // FIXME: find a place for function def.
         mFunc = FuncInfo{};
+        auto const& args = lambdaPtr->mArguments.first;
+        for (auto const& arg : args)
+        {
+            auto [idx, scope] = define(arg);
+            ASSERT(scope == Scope::kLOCAL);
+        }
         compile(lambdaPtr->mBody);
         instructions().push_back(kRET);
         auto funcInstructions = mFunc.value().first;
         mFunc = {};
-
         auto const index = mCode.constantPool.size();
-        auto const nbArgs = lambdaPtr->mArguments.first.size();
-        auto const funcSym = FunctionSymbol{nbArgs, /* nbLocals= */ 0, funcInstructions};
+        auto const funcSym = FunctionSymbol{args.size(), /* nbLocals= */ 0, funcInstructions};
         mCode.constantPool.push_back(funcSym);
         instructions().push_back(kCONST);
         auto bytes = integerToFourBytes(index);
