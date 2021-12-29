@@ -60,7 +60,7 @@ void Compiler::compile(ExprPtr const& expr)
         }
         instructions().push_back(kSET_GLOBAL);
         auto index = mSymbolTable.size();
-        mSymbolTable.insert({defPtr->mVariableName, {defPtr->mValue, index}});
+        mSymbolTable.insert({defPtr->mVariableName, index});
         auto bytes = integerToFourBytes(index);
         for (Byte i : bytes)
         {
@@ -71,7 +71,7 @@ void Compiler::compile(ExprPtr const& expr)
     if (auto variablePtr = dynamic_cast<Variable const*>(exprPtr))
     {
         auto const name = variablePtr->name();
-        auto index = mSymbolTable.at(name).second;
+        auto index = mSymbolTable.at(name);
         instructions().push_back(kGET_GLOBAL);
         auto bytes = integerToFourBytes(index);
         for (Byte i : bytes)
