@@ -199,19 +199,33 @@ void Compiler::compile(ExprPtr const& expr)
                 ASSERT(nbOperands == 1U);
                 return kNOT;
             }
-            FAIL_("Not supported yet!");
+            return static_cast<OpCode>(-1);
         }();
-        if (nbOperands == 1)
+        // primitive procedure
+        if (opCode >= 0)
         {
+            if (nbOperands == 1)
+            {
+                compile(appPtr->mOperands.at(0));
+                instructions().push_back(opCode);
+                return;
+            }
             compile(appPtr->mOperands.at(0));
-            instructions().push_back(opCode);
+            for (auto i = 1U; i < nbOperands; ++i)
+            {
+                compile(appPtr->mOperands.at(i));
+                instructions().push_back(opCode);
+            }
             return;
         }
-        compile(appPtr->mOperands.at(0));
-        for (auto i = 1U; i < nbOperands; ++i)
+        // lambda procedure.
         {
-            compile(appPtr->mOperands.at(i));
-            instructions().push_back(opCode);
+            for (auto const& o : appPtr->mOperands)
+            {
+                compile(o);
+            }
+            compile(appPtr->mOperator);
+            instructions().push_back(kCALL);
         }
         return;
     }

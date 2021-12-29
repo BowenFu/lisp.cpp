@@ -149,10 +149,15 @@ void VM::run()
             return;
         case kCALL:
         {
-            uint32_t index = fourBytesToInteger<uint32_t>(&instructions()[mIp]);
+            uint32_t nbParams = fourBytesToInteger<uint32_t>(&instructions()[mIp]);
             mIp += 4;
 
-            auto const& functionSymbol = std::get<FunctionSymbol>(mCode.constantPool.at(index));
+            auto const functionSymbolPtr = std::get_if<FunctionSymbol>(&operandStack().top());
+            ASSERT(functionSymbolPtr);
+            auto const& functionSymbol = *functionSymbolPtr;
+            operandStack().pop();
+            ASSERT(nbParams == functionSymbol.nbArgs());
+
             std::vector<Object> params(functionSymbol.nbArgs() + functionSymbol.nbLocals());
             for (size_t i = functionSymbol.nbArgs(); i > 0; --i)
             {
