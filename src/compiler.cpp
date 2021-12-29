@@ -226,6 +226,11 @@ void Compiler::compile(ExprPtr const& expr)
             }
             compile(appPtr->mOperator);
             instructions().push_back(kCALL);
+            auto bytes = integerToFourBytes(appPtr->mOperands.size());
+            for (Byte i : bytes)
+            {
+                instructions().push_back(i);
+            }
         }
         return;
     }
