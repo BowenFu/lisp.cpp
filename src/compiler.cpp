@@ -139,7 +139,7 @@ void Compiler::compile(ExprPtr const& expr)
         mFunc = {};
 
         auto const index = mCode.constantPool.size();
-        auto const nbArgs = std::get_if<std::string>(&lambdaPtr->mArguments) ? 1 : std::get_if<1>(&lambdaPtr->mArguments)->first.size();
+        auto const nbArgs = lambdaPtr->mArguments.first.size();
         auto const funcSym = FunctionSymbol{nbArgs, /* nbLocals= */ 0, funcInstructions};
         mCode.constantPool.push_back(funcSym);
         instructions().push_back(kCONST);
