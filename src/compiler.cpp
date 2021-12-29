@@ -202,7 +202,7 @@ void Compiler::compile(ExprPtr const& expr)
             return static_cast<OpCode>(-1);
         }();
         // primitive procedure
-        if (opCode >= 0)
+        if (static_cast<int32_t>(opCode) >= 0)
         {
             if (nbOperands == 1)
             {
