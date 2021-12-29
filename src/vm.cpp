@@ -14,15 +14,15 @@ std::ostream& operator << (std::ostream& o, FunctionSymbol const& f)
 
 void VM::run()
 {
-    while (mIp < mCode.instructions.size())
+    while (mIp < instructions().size())
     {
-        Byte opCode = mCode.instructions[mIp];
+        Byte opCode = instructions()[mIp];
         ++mIp;
         switch (opCode)
         {
         case kICONST:
         {
-            int32_t word = fourBytesToInteger<int32_t>(&mCode.instructions[mIp]);
+            int32_t word = fourBytesToInteger<int32_t>(&instructions()[mIp]);
             mIp += 4;
             operandStack().push(word);
             break;
@@ -130,7 +130,7 @@ void VM::run()
         }
         case kCONST:
         {
-            uint32_t index = fourBytesToInteger<uint32_t>(&mCode.instructions[mIp]);
+            uint32_t index = fourBytesToInteger<uint32_t>(&instructions()[mIp]);
             mIp += 4;
             operandStack().push(mCode.constantPool.at(index));
             break;
@@ -149,7 +149,7 @@ void VM::run()
             return;
         case kCALL:
         {
-            uint32_t index = fourBytesToInteger<uint32_t>(&mCode.instructions[mIp]);
+            uint32_t index = fourBytesToInteger<uint32_t>(&instructions()[mIp]);
             mIp += 4;
 
             auto const& functionSymbol = std::get<FunctionSymbol>(mCode.constantPool.at(index));
@@ -160,7 +160,7 @@ void VM::run()
                 operandStack().pop();
             }
             mCallStack.push(StackFrame{functionSymbol, std::move(params), mIp});
-            mIp = functionSymbol.address();
+            mIp = 0;
             break;
         }
         case kRET:
@@ -171,7 +171,7 @@ void VM::run()
         }
         case kGET_LOCAL:
         {
-            uint32_t index = fourBytesToInteger<uint32_t>(&mCode.instructions[mIp]);
+            uint32_t index = fourBytesToInteger<uint32_t>(&instructions()[mIp]);
             mIp += 4;
 
             operandStack().push(mCallStack.top().locals(index));
@@ -179,7 +179,7 @@ void VM::run()
         }
         case kSET_LOCAL:
         {
-            uint32_t index = fourBytesToInteger<uint32_t>(&mCode.instructions[mIp]);
+            uint32_t index = fourBytesToInteger<uint32_t>(&instructions()[mIp]);
             mIp += 4;
 
             mCallStack.top().locals(index) = operandStack().top();
@@ -198,7 +198,7 @@ void VM::run()
         }
         case kJUMP:
         {
-            uint32_t index = fourBytesToInteger<uint32_t>(&mCode.instructions[mIp]);
+            uint32_t index = fourBytesToInteger<uint32_t>(&instructions()[mIp]);
             mIp = index;
             break;
         }
@@ -208,7 +208,7 @@ void VM::run()
             operandStack().pop();
             if (!pred)
             {
-                uint32_t index = fourBytesToInteger<uint32_t>(&mCode.instructions[mIp]);
+                uint32_t index = fourBytesToInteger<uint32_t>(&instructions()[mIp]);
                 mIp = index;
             }
             else
@@ -221,7 +221,7 @@ void VM::run()
         {
             auto value = operandStack().top();
             operandStack().pop();
-            uint32_t index = fourBytesToInteger<uint32_t>(&mCode.instructions[mIp]);
+            uint32_t index = fourBytesToInteger<uint32_t>(&instructions()[mIp]);
             mIp += 4;
             if (mGlobals.size() == index)
             {
@@ -235,7 +235,7 @@ void VM::run()
         }
         case kGET_GLOBAL:
         {
-            uint32_t index = fourBytesToInteger<uint32_t>(&mCode.instructions[mIp]);
+            uint32_t index = fourBytesToInteger<uint32_t>(&instructions()[mIp]);
             mIp += 4;
             operandStack().push(mGlobals.at(index));
             break;

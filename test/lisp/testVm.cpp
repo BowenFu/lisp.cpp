@@ -31,24 +31,24 @@ TEST(VM, str)
     EXPECT_EQ(output, "some str: 123\n");
 }
 
-TEST(VM, func)
-{
-    std::vector<Byte> const instructions = {kICONST, 0, 0, 0, 11, kCALL, 0, 0, 0, 0, kHALT, kGET_LOCAL, 0, 0, 0, 0, kPRINT};
-    std::vector<Object> const constPool = {FunctionSymbol{"main", 1, 1, 11}};
-    VM vm{ByteCode{instructions, constPool}};
-    testing::internal::CaptureStdout();
-    vm.run();
-    std::string output = testing::internal::GetCapturedStdout();
-    EXPECT_EQ(output, "11\n");
-}
+// TEST(VM, func)
+// {
+//     std::vector<Byte> const instructions = {kICONST, 0, 0, 0, 11, kCALL, 0, 0, 0, 0, kHALT, kGET_LOCAL, 0, 0, 0, 0, kPRINT};
+//     std::vector<Object> const constPool = {FunctionSymbol{"main", 1, 1, 11}};
+//     VM vm{ByteCode{instructions, constPool}};
+//     testing::internal::CaptureStdout();
+//     vm.run();
+//     std::string output = testing::internal::GetCapturedStdout();
+//     EXPECT_EQ(output, "11\n");
+// }
 
-TEST(VM, func2)
-{
-    std::vector<Byte> const instructions = {kICONST, 0, 0, 0, 11, kCALL, 0, 0, 0, 0, kPRINT, kHALT, kGET_LOCAL, 0, 0, 0, 0, kICONST, 0, 0, 0, 2, kIADD, kSET_LOCAL, 0, 0, 0, 1, kGET_LOCAL, 0, 0, 0, 1, kRET};
-    std::vector<Object> const constPool = {FunctionSymbol{"id", 1, 1, 12}};
-    VM vm{ByteCode{instructions, constPool}};
-    testing::internal::CaptureStdout();
-    vm.run();
-    std::string output = testing::internal::GetCapturedStdout();
-    EXPECT_EQ(output, "13\n");
-}
+// TEST(VM, func2)
+// {
+//     std::vector<Byte> const instructions = {kICONST, 0, 0, 0, 11, kCALL, 0, 0, 0, 0, kPRINT, kHALT, kGET_LOCAL, 0, 0, 0, 0, kICONST, 0, 0, 0, 2, kIADD, kSET_LOCAL, 0, 0, 0, 1, kGET_LOCAL, 0, 0, 0, 1, kRET};
+//     std::vector<Object> const constPool = {FunctionSymbol{"id", 1, 1, 12}};
+//     VM vm{ByteCode{instructions, constPool}};
+//     testing::internal::CaptureStdout();
+//     vm.run();
+//     std::string output = testing::internal::GetCapturedStdout();
+//     EXPECT_EQ(output, "13\n");
+// }

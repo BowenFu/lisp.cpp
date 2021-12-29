@@ -38,20 +38,25 @@ enum OpCode : Byte
     kPOP,
 };
 
+using Instructions = std::vector<Byte>;
 
 class FunctionSymbol
 {
     std::string mName{};
     size_t mNbArgs{};
     size_t mNbLocals{};
-    size_t mAddress{};
+    Instructions mInstructions{};
 public:
-    FunctionSymbol(std::string name, size_t nbArgs, size_t nbLocals, size_t address)
-    : mName{name}
+    FunctionSymbol(size_t nbArgs, size_t nbLocals, Instructions const& instructions)
+    : mName{}
     , mNbArgs{nbArgs}
     , mNbLocals{nbLocals}
-    , mAddress{address}
+    , mInstructions{instructions}
     {}
+    void setName(std::string const& name)
+    {
+        mName = name;
+    }
     std::string name() const
     {
         return mName;
@@ -64,9 +69,9 @@ public:
     {
         return mNbLocals;
     }
-    size_t address() const
+    auto const& instructions() const
     {
-        return mAddress;
+        return mInstructions;
     }
 };
 
@@ -86,7 +91,7 @@ public:
     , mReturnAddress{returnAddress}
     {
     }
-    auto func() const
+    auto const& func() const
     {
         return mFunc;
     }
@@ -99,8 +104,6 @@ public:
         return mLocals.at(i);
     }
 };
-
-using Instructions = std::vector<Byte>;
 
 class ByteCode
 {
@@ -123,6 +126,10 @@ public:
     auto& operandStack()
     {
         return mOperands;
+    }
+    auto const& instructions() const
+    {
+        return mCallStack.empty() ? mCode.instructions : mCallStack.top().func().instructions();
     }
 private:
     ByteCode mCode{};
