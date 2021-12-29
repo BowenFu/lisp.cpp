@@ -158,7 +158,7 @@ void Compiler::compile(ExprPtr const& expr)
     if (auto appPtr = dynamic_cast<Application const*>(exprPtr))
     {
         auto nbOperands = appPtr->mOperands.size();
-        OpCode opCode = [appPtr, nbOperands]
+        int32_t opCode = [appPtr, nbOperands] () -> int32_t
         {
             auto opName = appPtr->mOperator->toString();
             if (opName == "+")
@@ -199,22 +199,22 @@ void Compiler::compile(ExprPtr const& expr)
                 ASSERT(nbOperands == 1U);
                 return kNOT;
             }
-            return static_cast<OpCode>(-1);
+            return -1;
         }();
         // primitive procedure
-        if (static_cast<int32_t>(opCode) >= 0)
+        if (opCode >= 0)
         {
             if (nbOperands == 1)
             {
                 compile(appPtr->mOperands.at(0));
-                instructions().push_back(opCode);
+                instructions().push_back(static_cast<OpCode>(opCode));
                 return;
             }
             compile(appPtr->mOperands.at(0));
             for (auto i = 1U; i < nbOperands; ++i)
             {
                 compile(appPtr->mOperands.at(i));
-                instructions().push_back(opCode);
+                instructions().push_back(static_cast<OpCode>(opCode));
             }
             return;
         }
