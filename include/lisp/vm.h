@@ -91,7 +91,7 @@ public:
     , mReturnAddress{returnAddress}
     {
     }
-    auto func() const
+    auto const& func() const
     {
         return mFunc;
     }
