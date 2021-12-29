@@ -21,11 +21,11 @@ void Compiler::compile(ExprPtr const& expr)
     {
         auto const index = mCode.constantPool.size();
         mCode.constantPool.push_back(numPtr->get());
-        mCode.instructions.push_back(kCONST);
+        instructions().push_back(kCONST);
         auto bytes = integerToFourBytes(index);
         for (Byte i : bytes)
         {
-            mCode.instructions.push_back(i);
+            instructions().push_back(i);
         }
         return;
     }
@@ -33,84 +33,88 @@ void Compiler::compile(ExprPtr const& expr)
     {
         auto const index = mCode.constantPool.size();
         mCode.constantPool.push_back(strPtr->get());
-        mCode.instructions.push_back(kCONST);
+        instructions().push_back(kCONST);
         auto bytes = integerToFourBytes(index);
         for (Byte i : bytes)
         {
-            mCode.instructions.push_back(i);
+            instructions().push_back(i);
         }
         return;
     }
     if (auto boolPtr = dynamic_cast<Bool const*>(exprPtr))
     {
-        mCode.instructions.push_back(kICONST);
+        instructions().push_back(kICONST);
         auto bytes = integerToFourBytes(boolPtr->get());
         for (Byte i : bytes)
         {
-            mCode.instructions.push_back(i);
+            instructions().push_back(i);
         }
         return;
     }
     if (auto defPtr = dynamic_cast<Definition const*>(exprPtr))
     {
         compile(defPtr->mValue);
-        mCode.instructions.push_back(kSET_GLOBAL);
-        auto index = mSymbolTable->symbolTable.size();
-        mSymbolTable->symbolTable.insert({defPtr->mVariableName, {defPtr->mValue, index}});
+        if (auto* funcSymPtr = std::get_if<FunctionSymbol>(&mCode.constantPool.back()))
+        {
+            funcSymPtr->setName(defPtr->mVariableName);
+        }
+        instructions().push_back(kSET_GLOBAL);
+        auto index = mSymbolTable.size();
+        mSymbolTable.insert({defPtr->mVariableName, {defPtr->mValue, index}});
         auto bytes = integerToFourBytes(index);
         for (Byte i : bytes)
         {
-            mCode.instructions.push_back(i);
+            instructions().push_back(i);
         }
         return;
     }
     if (auto variablePtr = dynamic_cast<Variable const*>(exprPtr))
     {
         auto const name = variablePtr->name();
-        auto index = mSymbolTable->symbolTable.at(name).second;
-        mCode.instructions.push_back(kGET_GLOBAL);
+        auto index = mSymbolTable.at(name).second;
+        instructions().push_back(kGET_GLOBAL);
         auto bytes = integerToFourBytes(index);
         for (Byte i : bytes)
         {
-            mCode.instructions.push_back(i);
+            instructions().push_back(i);
         }
         return;
     }
     if (auto ifPtr = dynamic_cast<If const*>(exprPtr))
     {
         compile(ifPtr->mPredicate);
-        mCode.instructions.push_back(kJUMP_IF_NOT_TRUE);
+        instructions().push_back(kJUMP_IF_NOT_TRUE);
         // jump to alternative
-        auto const jump0OperandIndex = mCode.instructions.size();
+        auto const jump0OperandIndex = instructions().size();
         for (size_t i = 0; i < 4; ++i)
         {
-            mCode.instructions.push_back(0);
+            instructions().push_back(0);
         }
         compile(ifPtr->mConsequent);
-        mCode.instructions.push_back(kJUMP);
+        instructions().push_back(kJUMP);
         // jump to post alternative
-        auto const jump1OperandIndex = mCode.instructions.size();
+        auto const jump1OperandIndex = instructions().size();
         for (size_t i = 0; i < 4; ++i)
         {
-            mCode.instructions.push_back(0);
+            instructions().push_back(0);
         }
         // update jump0
         {
-            auto const alterPos = mCode.instructions.size();
+            auto const alterPos = instructions().size();
             auto bytes = integerToFourBytes(alterPos);
             for (size_t i = 0; i < 4; ++i)
             {
-                mCode.instructions.at(jump0OperandIndex + i) = bytes[i];
+                instructions().at(jump0OperandIndex + i) = bytes[i];
             }
         }
         compile(ifPtr->mAlternative);
         // update jump1
         {
-            auto const postAlterPos = mCode.instructions.size();
+            auto const postAlterPos = instructions().size();
             auto bytes = integerToFourBytes(postAlterPos);
             for (size_t i = 0; i < 4; ++i)
             {
-                mCode.instructions.at(jump1OperandIndex + i) = bytes[i];
+                instructions().at(jump1OperandIndex + i) = bytes[i];
             }
         }
         return;
@@ -120,26 +124,30 @@ void Compiler::compile(ExprPtr const& expr)
         for (auto const& e : seqPtr->mActions)
         {
             compile(e);
-            mCode.instructions.push_back(kPOP);
+            instructions().push_back(kPOP);
         }
-        mCode.instructions.resize(mCode.instructions.size() - 1);
+        instructions().resize(instructions().size() - 1);
         return;
     }
     if (auto lambdaPtr = dynamic_cast<LambdaBase<CompoundProcedure> const*>(exprPtr))
     {
+        // FIXME: find a place for function def.
+        mFunc = FuncInfo{};
+        compile(lambdaPtr->mBody);
+        instructions().push_back(kRET);
+        auto funcInstructions = mFunc.value().first;
+        mFunc = {};
+
         auto const index = mCode.constantPool.size();
         auto const nbArgs = std::get_if<std::string>(&lambdaPtr->mArguments) ? 1 : std::get_if<1>(&lambdaPtr->mArguments)->first.size();
-        auto const funcSym = FunctionSymbol{"unnamed", nbArgs, /* nbLocals= */ 0, mCode.instructions.size()};
+        auto const funcSym = FunctionSymbol{nbArgs, /* nbLocals= */ 0, funcInstructions};
         mCode.constantPool.push_back(funcSym);
-        mCode.instructions.push_back(kCONST);
+        instructions().push_back(kCONST);
         auto bytes = integerToFourBytes(index);
         for (Byte i : bytes)
         {
-            mCode.instructions.push_back(i);
+            instructions().push_back(i);
         }
-        // FIXME: find a place for function def.
-        compile(lambdaPtr->mBody);
-        mCode.instructions.push_back(kRET);
         return;
     }
     if (auto appPtr = dynamic_cast<Application const*>(exprPtr))
@@ -191,14 +199,14 @@ void Compiler::compile(ExprPtr const& expr)
         if (nbOperands == 1)
         {
             compile(appPtr->mOperands.at(0));
-            mCode.instructions.push_back(opCode);
+            instructions().push_back(opCode);
             return;
         }
         compile(appPtr->mOperands.at(0));
         for (auto i = 1U; i < nbOperands; ++i)
         {
             compile(appPtr->mOperands.at(i));
-            mCode.instructions.push_back(opCode);
+            instructions().push_back(opCode);
         }
         return;
     }
