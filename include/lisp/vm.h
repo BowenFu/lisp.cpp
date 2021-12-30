@@ -36,6 +36,9 @@ enum OpCode : Byte
     kSET_GLOBAL,
     kGET_GLOBAL,
     kPOP,
+    kCONS,
+    kCAR,
+    kCDR,
 };
 
 using Instructions = std::vector<Byte>;

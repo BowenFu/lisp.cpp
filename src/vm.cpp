@@ -250,6 +250,26 @@ void VM::run()
             operandStack().pop();
             break;
         }
+        case kCONS:
+        {
+            auto const rhs = operandStack().top();
+            operandStack().pop();
+            auto const lhs = operandStack().top();
+            operandStack().pop();
+            operandStack().push(cons(lhs, rhs));
+            break;
+        }
+        case kCAR:
+        case kCDR:
+        {
+            auto const obj = operandStack().top();
+            auto const consPtrPtr = std::get_if<ConsPtr>(&obj);
+            ASSERT(consPtrPtr);
+            auto const& consPtr = *consPtrPtr;
+            operandStack().pop();
+            operandStack().push(opCode == kCAR ? car(consPtr) : cdr(consPtr));
+            break;
+        }
         }
     }
 }

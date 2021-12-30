@@ -30,3 +30,13 @@ TEST(VM, str)
     std::string output = testing::internal::GetCapturedStdout();
     EXPECT_EQ(output, "some str: 123\n");
 }
+
+TEST(VM, cons)
+{
+    std::vector<Byte> const instructions = {kCONST, 0, 0, 0, 0, kCONST, 0, 0, 0, 1, kCONS, kCAR, kPRINT};
+    VM vm{ByteCode{instructions, {"some str: 123", 12345}}};
+    testing::internal::CaptureStdout();
+    vm.run();
+    std::string output = testing::internal::GetCapturedStdout();
+    EXPECT_EQ(output, "some str: 123\n");
+}
