@@ -193,7 +193,6 @@ TEST(Compiler, lambda2)
     EXPECT_EQ(output, "5.5\n");
 }
 
-#if 0
 TEST(Compiler, lambda3)
 {
     Compiler c{};
@@ -217,4 +216,3 @@ TEST(Compiler, lambda3)
     std::string output = testing::internal::GetCapturedStdout();
     EXPECT_EQ(output, "11\n");
 }
-#endif 
