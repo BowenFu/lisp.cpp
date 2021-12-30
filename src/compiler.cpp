@@ -134,7 +134,7 @@ void Compiler::compile(ExprPtr const& expr)
     {
         // FIXME: find a place for function def.
         mFunc = FuncInfo{};
-        auto const& args = lambdaPtr->mArguments.first;
+        auto const& [args, variadic] = lambdaPtr->mArguments;
         for (auto const& arg : args)
         {
             auto [idx, scope] = define(arg);
@@ -145,7 +145,7 @@ void Compiler::compile(ExprPtr const& expr)
         auto funcInstructions = mFunc.value().first;
         mFunc = {};
         auto const index = mCode.constantPool.size();
-        auto const funcSym = FunctionSymbol{args.size(), /* nbLocals= */ 0, funcInstructions};
+        auto const funcSym = FunctionSymbol{args.size(), variadic, /* nbLocals= */ 0, funcInstructions};
         mCode.constantPool.push_back(funcSym);
         instructions().push_back(kCONST);
         auto bytes = integerToFourBytes(index);

@@ -45,16 +45,18 @@ using Instructions = std::vector<Byte>;
 
 class FunctionSymbol
 {
-    std::string mName{};
     size_t mNbArgs{};
+    bool mVariadic{};
     size_t mNbLocals{};
     Instructions mInstructions{};
+    std::string mName{};
 public:
-    FunctionSymbol(size_t nbArgs, size_t nbLocals, Instructions const& instructions)
-    : mName{}
-    , mNbArgs{nbArgs}
+    FunctionSymbol(size_t nbArgs, bool variadic, size_t nbLocals, Instructions const& instructions)
+    : mNbArgs{nbArgs}
+    , mVariadic{variadic}
     , mNbLocals{nbLocals}
     , mInstructions{instructions}
+    , mName{}
     {}
     void setName(std::string const& name)
     {
@@ -67,6 +69,10 @@ public:
     size_t nbArgs() const
     {
         return mNbArgs;
+    }
+    auto variadic() const
+    {
+        return mVariadic;
     }
     size_t nbLocals() const
     {
@@ -81,7 +87,13 @@ public:
 class VMCons;
 using ConsPtr = std::shared_ptr<VMCons>;
 
-using Object = std::variant<int32_t, double, std::string, FunctionSymbol, ConsPtr>;
+
+class VMNil
+{};
+
+inline constexpr VMNil vmNil{};
+
+using Object = std::variant<int32_t, double, std::string, FunctionSymbol, ConsPtr, VMNil>;
 
 class VMCons
 {

@@ -12,6 +12,11 @@ std::ostream& operator << (std::ostream& o, FunctionSymbol const& f)
     return o << "Function " << f.name();
 }
 
+std::ostream& operator << (std::ostream& o, VMNil)
+{
+    return o << "vmNil";
+}
+
 void VM::run()
 {
     while (mIp < instructions().size())
@@ -156,14 +161,35 @@ void VM::run()
             ASSERT(functionSymbolPtr);
             auto const functionSymbol = *functionSymbolPtr;
             operandStack().pop();
-            ASSERT(nbParams == functionSymbol.nbArgs());
-
-            std::vector<Object> params(functionSymbol.nbArgs() + functionSymbol.nbLocals());
-            for (size_t i = functionSymbol.nbArgs(); i > 0; --i)
+            auto const nbArgs = functionSymbol.nbArgs();
+            ASSERT(nbParams + 1 >= nbArgs);
+            std::vector<Object> params(nbArgs + functionSymbol.nbLocals());
+            if (!functionSymbol.variadic())
             {
-                params.at(i - 1) = operandStack().top();
-                operandStack().pop();
+                ASSERT(nbParams == nbArgs);
+                for (size_t i = nbArgs; i > 0; --i)
+                {
+                    params.at(i - 1) = operandStack().top();
+                    operandStack().pop();
+                }
             }
+            else
+            {
+                auto nbRest = nbParams + 1 - nbArgs; 
+                Object rest = vmNil;
+                for (size_t i = 0; i < nbRest; ++i)
+                {
+                    rest = cons(operandStack().top(), rest);
+                    operandStack().pop();
+                }
+                params.back() = rest;
+                for (size_t i = nbArgs - 1; i > 0; --i)
+                {
+                    params.at(i - 1) = operandStack().top();
+                    operandStack().pop();
+                }
+            }
+
             mCallStack.push(StackFrame{functionSymbol, std::move(params), mIp});
             mIp = 0;
             break;
