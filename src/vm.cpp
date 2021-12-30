@@ -154,7 +154,7 @@ void VM::run()
 
             auto const functionSymbolPtr = std::get_if<FunctionSymbol>(&operandStack().top());
             ASSERT(functionSymbolPtr);
-            auto const& functionSymbol = *functionSymbolPtr;
+            auto const functionSymbol = *functionSymbolPtr;
             operandStack().pop();
             ASSERT(nbParams == functionSymbol.nbArgs());
 
