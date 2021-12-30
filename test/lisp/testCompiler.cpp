@@ -216,3 +216,25 @@ TEST(Compiler, lambda3)
     std::string output = testing::internal::GetCapturedStdout();
     EXPECT_EQ(output, "11\n");
 }
+
+TEST(Compiler, Variadiclambda)
+{
+    Compiler c{};
+    ExprPtr num{new Number{5.5}};
+    ExprPtr iVar{new Variable{"i"}};
+    std::shared_ptr<Sequence> seq{new Sequence{{iVar}}};
+    ExprPtr func{new Lambda{Params{std::make_pair(std::vector<std::string>{"i"}, true)}, seq}};
+    auto const name = "list";
+    ExprPtr def{new Definition{name, func}};
+    c.compile(def);
+    ExprPtr var{new Variable{name}};
+    ExprPtr app{new Application{var, {num}}};
+    c.compile(app);
+    ByteCode code = c.code();
+    code.instructions.push_back(kPRINT);
+    VM vm{code};
+    testing::internal::CaptureStdout();
+    vm.run();
+    std::string output = testing::internal::GetCapturedStdout();
+    EXPECT_EQ(output, "(5.5 . nil)\n");
+}

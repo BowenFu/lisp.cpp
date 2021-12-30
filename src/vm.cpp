@@ -14,8 +14,33 @@ std::ostream& operator << (std::ostream& o, FunctionSymbol const& f)
 
 std::ostream& operator << (std::ostream& o, VMNil)
 {
-    return o << "vmNil";
+    return o << "nil";
 }
+
+std::ostream& operator << (std::ostream& o, Object const& obj);
+
+namespace std
+{
+std::ostream& operator << (std::ostream& o, ConsPtr const& cons_)
+{
+    o << "(";
+    o << car(cons_);
+    o << " . ";
+    o << cdr(cons_);
+    o << ")";
+    return o;
+}
+}
+
+std::ostream& operator << (std::ostream& o, Object const& obj)
+{
+    std::visit([&o](auto op)
+    {
+        o << std::boolalpha << op;
+    }, obj);
+    return o;
+}
+
 
 void VM::run()
 {
@@ -144,10 +169,7 @@ void VM::run()
         {
             auto op = operandStack().top();
             operandStack().pop();
-            std::visit([](auto op)
-            {
-                std::cout << std::boolalpha << op << std::endl;
-            }, op);
+            std::cout << op << std::endl;
             break;
         }
         case kHALT:
