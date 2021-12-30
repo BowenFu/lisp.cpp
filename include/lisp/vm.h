@@ -81,7 +81,7 @@ class VM;
 
 class StackFrame
 {
-    FunctionSymbol const& mFunc;
+    FunctionSymbol const mFunc;
     std::vector<Object> mLocals;
     size_t mReturnAddress;
 public:
