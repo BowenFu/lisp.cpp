@@ -12,6 +12,36 @@ std::ostream& operator << (std::ostream& o, FunctionSymbol const& f)
     return o << "Function " << f.name();
 }
 
+std::ostream& operator << (std::ostream& o, VMNil)
+{
+    return o << "nil";
+}
+
+std::ostream& operator << (std::ostream& o, Object const& obj);
+
+namespace std
+{
+std::ostream& operator << (std::ostream& o, ConsPtr const& cons_)
+{
+    o << "(";
+    o << car(cons_);
+    o << " . ";
+    o << cdr(cons_);
+    o << ")";
+    return o;
+}
+}
+
+std::ostream& operator << (std::ostream& o, Object const& obj)
+{
+    std::visit([&o](auto op)
+    {
+        o << std::boolalpha << op;
+    }, obj);
+    return o;
+}
+
+
 void VM::run()
 {
     while (mIp < instructions().size())
@@ -139,10 +169,7 @@ void VM::run()
         {
             auto op = operandStack().top();
             operandStack().pop();
-            std::visit([](auto op)
-            {
-                std::cout << std::boolalpha << op << std::endl;
-            }, op);
+            std::cout << op << std::endl;
             break;
         }
         case kHALT:
@@ -156,14 +183,35 @@ void VM::run()
             ASSERT(functionSymbolPtr);
             auto const functionSymbol = *functionSymbolPtr;
             operandStack().pop();
-            ASSERT(nbParams == functionSymbol.nbArgs());
-
-            std::vector<Object> params(functionSymbol.nbArgs() + functionSymbol.nbLocals());
-            for (size_t i = functionSymbol.nbArgs(); i > 0; --i)
+            auto const nbArgs = functionSymbol.nbArgs();
+            ASSERT(nbParams + 1 >= nbArgs);
+            std::vector<Object> params(nbArgs + functionSymbol.nbLocals());
+            if (!functionSymbol.variadic())
             {
-                params.at(i - 1) = operandStack().top();
-                operandStack().pop();
+                ASSERT(nbParams == nbArgs);
+                for (size_t i = nbArgs; i > 0; --i)
+                {
+                    params.at(i - 1) = operandStack().top();
+                    operandStack().pop();
+                }
             }
+            else
+            {
+                auto nbRest = nbParams + 1 - nbArgs; 
+                Object rest = vmNil;
+                for (size_t i = 0; i < nbRest; ++i)
+                {
+                    rest = cons(operandStack().top(), rest);
+                    operandStack().pop();
+                }
+                params.back() = rest;
+                for (size_t i = nbArgs - 1; i > 0; --i)
+                {
+                    params.at(i - 1) = operandStack().top();
+                    operandStack().pop();
+                }
+            }
+
             mCallStack.push(StackFrame{functionSymbol, std::move(params), mIp});
             mIp = 0;
             break;
@@ -248,6 +296,26 @@ void VM::run()
         case kPOP:
         {
             operandStack().pop();
+            break;
+        }
+        case kCONS:
+        {
+            auto const rhs = operandStack().top();
+            operandStack().pop();
+            auto const lhs = operandStack().top();
+            operandStack().pop();
+            operandStack().push(cons(lhs, rhs));
+            break;
+        }
+        case kCAR:
+        case kCDR:
+        {
+            auto const obj = operandStack().top();
+            auto const consPtrPtr = std::get_if<ConsPtr>(&obj);
+            ASSERT(consPtrPtr);
+            auto const& consPtr = *consPtrPtr;
+            operandStack().pop();
+            operandStack().push(opCode == kCAR ? car(consPtr) : cdr(consPtr));
             break;
         }
         }

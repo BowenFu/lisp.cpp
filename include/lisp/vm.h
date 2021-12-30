@@ -6,6 +6,7 @@
 #include <stack>
 #include <string>
 #include <variant>
+#include <memory>
 
 using Byte = uint8_t;
 
@@ -36,22 +37,27 @@ enum OpCode : Byte
     kSET_GLOBAL,
     kGET_GLOBAL,
     kPOP,
+    kCONS,
+    kCAR,
+    kCDR,
 };
 
 using Instructions = std::vector<Byte>;
 
 class FunctionSymbol
 {
-    std::string mName{};
     size_t mNbArgs{};
+    bool mVariadic{};
     size_t mNbLocals{};
     Instructions mInstructions{};
+    std::string mName{};
 public:
-    FunctionSymbol(size_t nbArgs, size_t nbLocals, Instructions const& instructions)
-    : mName{}
-    , mNbArgs{nbArgs}
+    FunctionSymbol(size_t nbArgs, bool variadic, size_t nbLocals, Instructions const& instructions)
+    : mNbArgs{nbArgs}
+    , mVariadic{variadic}
     , mNbLocals{nbLocals}
     , mInstructions{instructions}
+    , mName{}
     {}
     void setName(std::string const& name)
     {
@@ -65,6 +71,10 @@ public:
     {
         return mNbArgs;
     }
+    auto variadic() const
+    {
+        return mVariadic;
+    }
     size_t nbLocals() const
     {
         return mNbLocals;
@@ -75,7 +85,50 @@ public:
     }
 };
 
-using Object = std::variant<int32_t, double, std::string, FunctionSymbol>;
+class VMCons;
+using ConsPtr = std::shared_ptr<VMCons>;
+
+
+class VMNil
+{};
+
+inline constexpr VMNil vmNil{};
+
+using Object = std::variant<int32_t, double, std::string, FunctionSymbol, ConsPtr, VMNil>;
+
+class VMCons
+{
+    Object mCar{};
+    Object mCdr{};
+public:
+    VMCons(Object const& car_, Object const& cdr_)
+    : mCar{car_}
+    , mCdr{cdr_}
+    {}
+    auto const& car() const
+    {
+        return mCar;
+    }
+    auto const& cdr() const
+    {
+        return mCdr;
+    }
+};
+
+inline ConsPtr cons(Object const& car_, Object const& cdr_)
+{
+    return std::make_shared<VMCons>(car_, cdr_);
+}
+
+inline Object car(ConsPtr const& cons_)
+{
+    return cons_->car();
+}
+
+inline Object cdr(ConsPtr const& cons_)
+{
+    return cons_->cdr();
+}
 
 class VM;
 
