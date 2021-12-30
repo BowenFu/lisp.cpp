@@ -199,6 +199,21 @@ void Compiler::compile(ExprPtr const& expr)
                 ASSERT(nbOperands == 1U);
                 return kNOT;
             }
+            else if (opName == "cons")
+            {
+                ASSERT(nbOperands == 2U);
+                return kCONS;
+            }
+            else if (opName == "car")
+            {
+                ASSERT(nbOperands == 1U);
+                return kCAR;
+            }
+            else if (opName == "cdr")
+            {
+                ASSERT(nbOperands == 1U);
+                return kCDR;
+            }
             return -1;
         }();
         // primitive procedure

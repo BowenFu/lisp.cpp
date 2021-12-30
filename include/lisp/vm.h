@@ -6,6 +6,7 @@
 #include <stack>
 #include <string>
 #include <variant>
+#include <memory>
 
 using Byte = uint8_t;
 
