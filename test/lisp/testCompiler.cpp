@@ -238,3 +238,23 @@ TEST(Compiler, Variadiclambda)
     std::string output = testing::internal::GetCapturedStdout();
     EXPECT_EQ(output, "(5.5 . nil)\n");
 }
+
+TEST(Compiler, consCar)
+{
+    Compiler c{};
+    ExprPtr num{new Number{5.5}};
+    auto const name1 = "cons";
+    ExprPtr var1{new Variable{name1}};
+    ExprPtr app1{new Application{var1, {num, num}}};
+    auto const name2 = "cdr";
+    ExprPtr var2{new Variable{name2}};
+    ExprPtr app2{new Application{var2, {app1}}};
+    c.compile(app2);
+    ByteCode code = c.code();
+    code.instructions.push_back(kPRINT);
+    VM vm{code};
+    testing::internal::CaptureStdout();
+    vm.run();
+    std::string output = testing::internal::GetCapturedStdout();
+    EXPECT_EQ(output, "5.5\n");
+}
