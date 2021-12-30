@@ -75,7 +75,44 @@ public:
     }
 };
 
-using Object = std::variant<int32_t, double, std::string, FunctionSymbol>;
+class VMCons;
+using ConsPtr = std::shared_ptr<VMCons>;
+
+using Object = std::variant<int32_t, double, std::string, FunctionSymbol, ConsPtr>;
+
+class VMCons
+{
+    Object mCar{};
+    Object mCdr{};
+public:
+    VMCons(Object const& car_, Object const& cdr_)
+    : mCar{car_}
+    , mCdr{cdr_}
+    {}
+    auto const& car() const
+    {
+        return mCar;
+    }
+    auto const& cdr() const
+    {
+        return mCdr;
+    }
+};
+
+inline ConsPtr cons(Object const& car_, Object const& cdr_)
+{
+    return std::make_shared<VMCons>(car_, cdr_);
+}
+
+inline Object car(ConsPtr const& cons_)
+{
+    return cons_->car();
+}
+
+inline Object cdr(ConsPtr const& cons_)
+{
+    return cons_->cdr();
+}
 
 class VM;
 
