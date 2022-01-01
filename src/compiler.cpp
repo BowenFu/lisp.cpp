@@ -150,9 +150,8 @@ void Compiler::compile(ExprPtr const& expr)
         for (auto const& e : seqPtr->mActions)
         {
             compile(e);
-            instructions().push_back(kPOP);
+            // todo, some actions push stack, some do not. Those pushing stack should pop their values.
         }
-        instructions().resize(instructions().size() - 1);
         return;
     }
     if (auto lambdaPtr = dynamic_cast<LambdaBase<CompoundProcedure> const*>(exprPtr))
