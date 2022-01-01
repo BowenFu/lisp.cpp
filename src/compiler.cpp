@@ -73,7 +73,7 @@ void Compiler::compile(ExprPtr const& expr)
     if (auto variablePtr = dynamic_cast<Variable const*>(exprPtr))
     {
         auto const name = variablePtr->name();
-        auto [index, scope] = getIndex(name);
+        auto [index, scope] = resolve(name);
         if (scope == Scope::kFUNCTION_SELF_REF)
         {
             instructions().push_back(kCURRENT_FUNCTION);
@@ -135,7 +135,9 @@ void Compiler::compile(ExprPtr const& expr)
     }
     if (auto lambdaPtr = dynamic_cast<LambdaBase<CompoundProcedure> const*>(exprPtr))
     {
-        mFunc = FuncInfo{};
+        FuncInfo funcInfo{};
+        std::get<1>(funcInfo) = symbolTable().extend();
+        mFuncStack.push(funcInfo);
         if (!lambdaPtr->mName.empty())
         {
             defineCurrentFunction(lambdaPtr->mName);
@@ -148,8 +150,8 @@ void Compiler::compile(ExprPtr const& expr)
         }
         compile(lambdaPtr->mBody);
         instructions().push_back(kRET);
-        auto funcInstructions = std::get<0>(mFunc.value());
-        mFunc = {};
+        auto funcInstructions = std::get<0>(mFuncStack.top());
+        mFuncStack.pop();
         auto const index = mCode.constantPool.size();
         auto const funcSym = FunctionSymbol{lambdaPtr->mName, args.size(), variadic, /* nbLocals= */ 0, funcInstructions};
         mCode.constantPool.push_back(funcSym);

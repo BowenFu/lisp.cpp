@@ -17,55 +17,91 @@ class CurrentFunctionIndex
 
 inline constexpr CurrentFunctionIndex currentFunctionIndex{};
 
+using VarInfo = std::pair<size_t, Scope>;
+class SymbolTable
+{
+    std::map<std::string, VarInfo> mNameToVarInfo{};
+    SymbolTable const* mEnclosing{};
+public:
+    SymbolTable() = default;
+    SymbolTable(SymbolTable const* const enclosing)
+    : mEnclosing{enclosing}
+    {}
+    auto extend() const
+    {
+        return SymbolTable(this);
+    }
+    std::optional<VarInfo> resolve(std::string const& name)
+    {
+        auto const* symTable = this;
+        do
+        {
+            auto const& map = symTable->mNameToVarInfo;
+            auto const iter = map.find(name);
+            if (iter != map.end())
+            {
+                return iter->second;
+            }
+            symTable = symTable->mEnclosing;
+        } while (symTable != nullptr);
+        return {};
+    }
+    VarInfo define(std::string const& name, Scope scope)
+    {
+        auto const index = mNameToVarInfo.size();
+        auto const varInfo = VarInfo{index, scope};
+        mNameToVarInfo[name] = varInfo;
+        return varInfo;
+    }
+};
+
 class Compiler
 {
-    using Index = size_t;
-    using SymbolTable = std::map<std::string, Index>;
     SymbolTable mSymbolTable{};
     ByteCode mCode{};
     using FuncInfo = std::tuple<Instructions, SymbolTable, std::string>;
-    std::optional<FuncInfo> mFunc{};
+    std::stack<FuncInfo> mFuncStack{};
     auto& instructions()
     {
-        return mFunc ? std::get<0>(mFunc.value()) : mCode.instructions;
+        return mFuncStack.empty() ? mCode.instructions : std::get<0>(mFuncStack.top());
     }
-    std::pair<Index, Scope> getIndex(std::string const& name) const
+    auto& symbolTable()
     {
-        if (mFunc)
+        return mFuncStack.empty() ? mSymbolTable : std::get<1>(mFuncStack.top());
+    }
+    VarInfo resolve(std::string const& name)
+    {
+        if (mFuncStack.empty())
         {
-            auto const& funcInfo = mFunc.value();
-            auto const map = std::get<1>(funcInfo);
-            auto iter = map.find(name);
-            if (iter != map.end())
-            {
-                return {iter->second, Scope::kLOCAL};
-            }
-            // first local args, then self
-            if (name == std::get<2>(funcInfo))
-            {
-                return {0, Scope::kFUNCTION_SELF_REF};
-            }
+            auto varInfo = mSymbolTable.resolve(name);
+            ASSERT_MSG(varInfo, name);
+            return varInfo.value();
         }
-
-        auto iter = mSymbolTable.find(name);
-        ASSERT_MSG(iter != mSymbolTable.end(), name);
-        auto const idx = iter->second;
-        return {idx, Scope::kGLOBAL};
+        
+        auto& funcInfo = mFuncStack.top();
+        auto& symTable = std::get<1>(funcInfo);
+        if (auto varInfo = symTable.resolve(name))
+        {
+            return varInfo.value();
+        }
+        // first local args, then self
+        if (name == std::get<2>(funcInfo))
+        {
+            return {0, Scope::kFUNCTION_SELF_REF};
+        }
+        FAIL_("Resolve failed!");
     }
-    std::pair<Index, Scope> defineCurrentFunction(std::string const& name)
+    VarInfo defineCurrentFunction(std::string const& name)
     {
-        ASSERT(mFunc);
-        std::get<2>(mFunc.value()) = name;
+        ASSERT(!mFuncStack.empty());
+        std::get<2>(mFuncStack.top()) = name;
         auto const scope = Scope::kFUNCTION_SELF_REF;
         return {0, scope};
     }
-    std::pair<Index, Scope> define(std::string const& name)
+    VarInfo define(std::string const& name)
     {
-        auto& map = mFunc ? std::get<1>(mFunc.value()) : mSymbolTable;
-        auto const idx = map.size();
-        map[name] = idx;
-        auto const scope = mFunc ? Scope::kLOCAL : Scope::kGLOBAL;
-        return {idx, scope};
+        auto const scope = mFuncStack.empty() ? Scope::kGLOBAL : Scope::kLOCAL;
+        return symbolTable().define(name, scope);
     }
     void emitIndex(size_t index);
 public:
