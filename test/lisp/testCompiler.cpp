@@ -150,7 +150,7 @@ TEST(Compiler, lambda0)
     testing::internal::CaptureStdout();
     vm.run();
     std::string output = testing::internal::GetCapturedStdout();
-    EXPECT_EQ(output, "Function getNum\n");
+    EXPECT_EQ(output, "Closure getNum\n");
 }
 
 TEST(Compiler, lambda1)
@@ -170,7 +170,7 @@ TEST(Compiler, lambda1)
     testing::internal::CaptureStdout();
     vm.run();
     std::string output = testing::internal::GetCapturedStdout();
-    EXPECT_EQ(output, "Function identity\n");
+    EXPECT_EQ(output, "Closure identity\n");
 }
 
 TEST(Compiler, lambda2)

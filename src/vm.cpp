@@ -4,12 +4,17 @@
 
 std::ostream& operator << (std::ostream& o, StackFrame const& f)
 {
-    return o << "StackFrame " << f.func().name();
+    return o << "StackFrame " << f.func()->funcSym().name();
 }
 
 std::ostream& operator << (std::ostream& o, FunctionSymbol const& f)
 {
     return o << "Function " << f.name();
+}
+
+std::ostream& operator << (std::ostream& o, ClosurePtr const& c)
+{
+    return o << "Closure " << c->funcSym().name();
 }
 
 std::ostream& operator << (std::ostream& o, VMNil)
@@ -179,9 +184,9 @@ void VM::run()
             uint32_t nbParams = fourBytesToInteger<uint32_t>(&instructions()[mIp]);
             mIp += 4;
 
-            auto const functionSymbolPtr = std::get_if<FunctionSymbol>(&operandStack().top());
-            ASSERT(functionSymbolPtr);
-            auto const functionSymbol = *functionSymbolPtr;
+            auto const closurePtrPtr = std::get_if<ClosurePtr>(&operandStack().top());
+            ASSERT(closurePtrPtr);
+            auto const functionSymbol = (*closurePtrPtr)->funcSym();
             operandStack().pop();
             auto const nbArgs = functionSymbol.nbArgs();
             ASSERT(nbParams + 1 >= nbArgs);
@@ -212,7 +217,7 @@ void VM::run()
                 }
             }
 
-            mCallStack.push(StackFrame{functionSymbol, std::move(params), mIp});
+            mCallStack.push(StackFrame{std::make_shared<Closure>(functionSymbol, std::vector<Object>{}), std::move(params), mIp});
             mIp = 0;
             break;
         }
@@ -330,7 +335,9 @@ void VM::run()
             uint32_t nbFreeVars = fourBytesToInteger<uint32_t>(&instructions()[mIp]);
             mIp += 4;
             ASSERT_MSG(nbFreeVars == 0, nbFreeVars);
-            operandStack().push(mCode.constantPool.at(index));
+            auto const funcSym = mCode.constantPool.at(index);
+            auto const closurePtr = std::make_shared<Closure>(std::get<FunctionSymbol>(funcSym), std::vector<Object>{});
+            operandStack().push(closurePtr);
             break;
         }
         }
