@@ -312,7 +312,7 @@ TEST(Compiler, rest)
     EXPECT_EQ(output, "(2 . (3 . nil))\n");
 }
 
-TEST(Compiler, localBinding)
+TEST(Compiler, freeVars)
 {
     std::string const source = " (define (my-cons car cdr) (lambda (dispatch) (if (= dispatch 'my-car) car cdr))) ((my-cons 1 2) 'my-cdr)";
     auto code = sourceToBytecode(source);
@@ -322,4 +322,16 @@ TEST(Compiler, localBinding)
     vm.run();
     std::string output = testing::internal::GetCapturedStdout();
     EXPECT_EQ(output, "2\n");
+}
+
+TEST(Compiler, localBinding)
+{
+    std::string const source = " (define (my-cons car cdr) (define x car) (define y cdr) (lambda (dispatch) (if (= dispatch 'my-car) x y))) ((my-cons 1 2) 'my-car)";
+    auto code = sourceToBytecode(source);
+    code.instructions.push_back(kPRINT);
+    VM vm{code};
+    testing::internal::CaptureStdout();
+    vm.run();
+    std::string output = testing::internal::GetCapturedStdout();
+    EXPECT_EQ(output, "1\n");
 }
