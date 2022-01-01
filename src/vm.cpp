@@ -217,7 +217,8 @@ void VM::run()
 
             auto const closurePtrPtr = std::get_if<ClosurePtr>(&operandStack().top());
             ASSERT(closurePtrPtr);
-            auto const functionSymbol = (*closurePtrPtr)->funcSym();
+            auto const closurePtr = *closurePtrPtr;
+            auto const functionSymbol = closurePtr->funcSym();
             operandStack().pop();
             auto const nbArgs = functionSymbol.nbArgs();
             ASSERT(nbParams + 1 >= nbArgs);
@@ -248,7 +249,7 @@ void VM::run()
                 }
             }
 
-            mCallStack.push(StackFrame{*closurePtrPtr, std::move(params), mIp});
+            mCallStack.push(StackFrame{closurePtr, std::move(params), mIp});
             mIp = 0;
             break;
         }
