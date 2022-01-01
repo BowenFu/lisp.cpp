@@ -8,25 +8,37 @@
 enum class Scope
 {
     kLOCAL,
-    kGLOBAL
+    kGLOBAL,
+    kFUNCTION_SELF_REF
 };
+
+class CurrentFunctionIndex
+{};
+
+inline constexpr CurrentFunctionIndex currentFunctionIndex{};
 
 class Compiler
 {
-    using SymbolTable = std::map<std::string, size_t>;
+    using Index = size_t;
+    using SymbolTable = std::map<std::string, Index>;
     SymbolTable mSymbolTable{};
     ByteCode mCode{};
-    using FuncInfo = std::pair<Instructions, SymbolTable>;
+    using FuncInfo = std::tuple<Instructions, SymbolTable, std::string>;
     std::optional<FuncInfo> mFunc{};
     auto& instructions()
     {
-        return mFunc ? mFunc.value().first : mCode.instructions;
+        return mFunc ? std::get<0>(mFunc.value()) : mCode.instructions;
     }
-    std::pair<size_t, Scope> getIndex(std::string const& name) const
+    std::pair<Index, Scope> getIndex(std::string const& name) const
     {
         if (mFunc)
         {
-            auto const map = mFunc.value().second;
+            auto const& funcInfo = mFunc.value();
+            if (name == std::get<2>(funcInfo))
+            {
+                return {0, Scope::kFUNCTION_SELF_REF};
+            }
+            auto const map = std::get<1>(funcInfo);
             auto iter = map.find(name);
             if (iter != map.end())
             {
@@ -36,9 +48,16 @@ class Compiler
         auto const idx = mSymbolTable.at(name);
         return {idx, Scope::kGLOBAL};
     }
-    std::pair<size_t, Scope> define(std::string const& name)
+    std::pair<Index, Scope> defineCurrentFunction(std::string const& name)
     {
-        auto& map = mFunc ? mFunc.value().second : mSymbolTable;
+        ASSERT(mFunc);
+        std::get<2>(mFunc.value()) = name;
+        auto const scope = Scope::kFUNCTION_SELF_REF;
+        return {0, scope};
+    }
+    std::pair<Index, Scope> define(std::string const& name)
+    {
+        auto& map = mFunc ? std::get<1>(mFunc.value()) : mSymbolTable;
         auto const idx = map.size();
         map[name] = idx;
         auto const scope = mFunc ? Scope::kLOCAL : Scope::kGLOBAL;

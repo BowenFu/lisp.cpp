@@ -40,29 +40,26 @@ enum OpCode : Byte
     kCONS,
     kCAR,
     kCDR,
+    kCURRENT_FUNCTION
 };
 
 using Instructions = std::vector<Byte>;
 
 class FunctionSymbol
 {
+    std::string mName{};
     size_t mNbArgs{};
     bool mVariadic{};
     size_t mNbLocals{};
     Instructions mInstructions{};
-    std::string mName{};
 public:
-    FunctionSymbol(size_t nbArgs, bool variadic, size_t nbLocals, Instructions const& instructions)
-    : mNbArgs{nbArgs}
+    FunctionSymbol(std::string const& name, size_t nbArgs, bool variadic, size_t nbLocals, Instructions const& instructions)
+    : mName{name}
+    , mNbArgs{nbArgs}
     , mVariadic{variadic}
     , mNbLocals{nbLocals}
     , mInstructions{instructions}
-    , mName{}
     {}
-    void setName(std::string const& name)
-    {
-        mName = name;
-    }
     std::string name() const
     {
         return mName;

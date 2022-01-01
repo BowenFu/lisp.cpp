@@ -318,6 +318,11 @@ void VM::run()
             operandStack().push(opCode == kCAR ? car(consPtr) : cdr(consPtr));
             break;
         }
+        case kCURRENT_FUNCTION:
+        {
+            operandStack().push(mCallStack.top().func());
+            break;
+        }
         }
     }
 }
