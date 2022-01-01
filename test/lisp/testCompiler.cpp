@@ -299,3 +299,27 @@ TEST(Compiler, factorial)
     std::string output = testing::internal::GetCapturedStdout();
     EXPECT_EQ(output, "120\n");
 }
+
+TEST(Compiler, rest)
+{
+    std::string const source = "(define rest (lambda (_ . y) y)) (rest 1 2 3)";
+    auto code = sourceToBytecode(source);
+    code.instructions.push_back(kPRINT);
+    VM vm{code};
+    testing::internal::CaptureStdout();
+    vm.run();
+    std::string output = testing::internal::GetCapturedStdout();
+    EXPECT_EQ(output, "(2 . (3 . nil))\n");
+}
+
+TEST(Compiler, rest)
+{
+    std::string const source = "(define rest (lambda (_ . y) y)) (rest 1 2 3)";
+    auto code = sourceToBytecode(source);
+    code.instructions.push_back(kPRINT);
+    VM vm{code};
+    testing::internal::CaptureStdout();
+    vm.run();
+    std::string output = testing::internal::GetCapturedStdout();
+    EXPECT_EQ(output, "(2 . (3 . nil))\n");
+}
