@@ -237,3 +237,5 @@
 )
 
 (define (even num) (= (% num 2) 0)) 
+
+(define (my-cons car cdr) (lambda (dispatch) (if (= dispatch 'my-car) car cdr)))

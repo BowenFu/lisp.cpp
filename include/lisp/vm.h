@@ -7,6 +7,7 @@
 #include <string>
 #include <variant>
 #include <memory>
+#include "meta.h"
 
 using Byte = uint8_t;
 
@@ -25,6 +26,9 @@ enum OpCode : Byte
     kRET,
     kGET_LOCAL,
     kSET_LOCAL,
+    kSET_GLOBAL,
+    kGET_GLOBAL,
+    kGET_FREE,
     kTRUE,
     kFALSE,
     kEQUAL,
@@ -34,13 +38,12 @@ enum OpCode : Byte
     kMINUS,
     kJUMP,
     kJUMP_IF_NOT_TRUE,
-    kSET_GLOBAL,
-    kGET_GLOBAL,
     kPOP,
     kCONS,
     kCAR,
     kCDR,
-    kCURRENT_FUNCTION
+    kCURRENT_FUNCTION,
+    kCLOSURE
 };
 
 using Instructions = std::vector<Byte>;
@@ -82,6 +85,9 @@ public:
     }
 };
 
+class Closure;
+using ClosurePtr = std::shared_ptr<Closure>;
+
 class VMCons;
 using ConsPtr = std::shared_ptr<VMCons>;
 
@@ -91,7 +97,27 @@ class VMNil
 
 inline constexpr VMNil vmNil{};
 
-using Object = std::variant<int32_t, double, std::string, FunctionSymbol, ConsPtr, VMNil>;
+using Object = std::variant<int32_t, double, std::string, FunctionSymbol, ClosurePtr, ConsPtr, VMNil>;
+
+class Closure
+{
+    FunctionSymbol mFuncSym;
+    std::vector<Object> mFreeVars;
+public:
+    Closure(FunctionSymbol const& funcSym, std::vector<Object> const& freeVars)
+    : mFuncSym{funcSym}
+    , mFreeVars{freeVars}
+    {
+    }
+    auto const& funcSym() const
+    {
+        return mFuncSym;
+    }
+    auto const& freeVars() const
+    {
+        return mFreeVars;
+    }
+};
 
 class VMCons
 {
@@ -131,19 +157,20 @@ class VM;
 
 class StackFrame
 {
-    FunctionSymbol const mFunc;
+    ClosurePtr const mClosure;
     std::vector<Object> mLocals;
     size_t mReturnAddress;
 public:
-    StackFrame(FunctionSymbol const& func, std::vector<Object>&& locals, size_t returnAddress)
-    : mFunc{func}
+    StackFrame(ClosurePtr const& func, std::vector<Object>&& locals, size_t returnAddress)
+    : mClosure{func}
     , mLocals{std::move(locals)}
     , mReturnAddress{returnAddress}
     {
     }
-    auto const& func() const
+    auto const& closure() const
     {
-        return mFunc;
+        ASSERT(mClosure);
+        return mClosure;
     }
     auto returnAddress() const
     {
@@ -179,7 +206,7 @@ public:
     }
     auto const& instructions() const
     {
-        return mCallStack.empty() ? mCode.instructions : mCallStack.top().func().instructions();
+        return mCallStack.empty() ? mCode.instructions : mCallStack.top().closure()->funcSym().instructions();
     }
 private:
     ByteCode mCode{};

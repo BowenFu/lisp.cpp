@@ -14,6 +14,39 @@ auto integerToFourBytes(size_t num) -> std::array<Byte, 4>
     return result;
 }
 
+void Compiler::emitIndex(size_t index)
+{
+    auto bytes = integerToFourBytes(index);
+    for (Byte i : bytes)
+    {
+        instructions().push_back(i);
+    }
+}
+
+void Compiler::emitVar(VarInfo const& varInfo)
+{
+    switch (varInfo.second)
+    {
+    case Scope::kGLOBAL:
+        instructions().push_back(kGET_GLOBAL);
+        emitIndex(varInfo.first);
+        break;
+    
+    case Scope::kLOCAL:
+        instructions().push_back(kGET_LOCAL);
+        emitIndex(varInfo.first);
+        break;
+    
+    case Scope::kFREE:
+        instructions().push_back(kGET_FREE);
+        emitIndex(varInfo.first);
+        break;
+
+    case Scope::kFUNCTION_SELF_REF:
+        FAIL_("Never reach here!");
+    }
+}
+
 void Compiler::compile(ExprPtr const& expr)
 {
     auto const exprPtr = expr.get();
@@ -22,11 +55,15 @@ void Compiler::compile(ExprPtr const& expr)
         auto const index = mCode.constantPool.size();
         mCode.constantPool.push_back(numPtr->get());
         instructions().push_back(kCONST);
-        auto bytes = integerToFourBytes(index);
-        for (Byte i : bytes)
-        {
-            instructions().push_back(i);
-        }
+        emitIndex(index);
+        return;
+    }
+    if (auto symPtr = dynamic_cast<Symbol const*>(exprPtr))
+    {
+        auto const index = mCode.constantPool.size();
+        mCode.constantPool.push_back(symPtr->toString());
+        instructions().push_back(kCONST);
+        emitIndex(index);
         return;
     }
     if (auto strPtr = dynamic_cast<String const*>(exprPtr))
@@ -34,21 +71,13 @@ void Compiler::compile(ExprPtr const& expr)
         auto const index = mCode.constantPool.size();
         mCode.constantPool.push_back(strPtr->get());
         instructions().push_back(kCONST);
-        auto bytes = integerToFourBytes(index);
-        for (Byte i : bytes)
-        {
-            instructions().push_back(i);
-        }
+        emitIndex(index);
         return;
     }
     if (auto boolPtr = dynamic_cast<Bool const*>(exprPtr))
     {
         instructions().push_back(kICONST);
-        auto bytes = integerToFourBytes(boolPtr->get());
-        for (Byte i : bytes)
-        {
-            instructions().push_back(i);
-        }
+        emitIndex(boolPtr->get());
         return;
     }
     if (auto defPtr = dynamic_cast<Definition const*>(exprPtr))
@@ -62,29 +91,19 @@ void Compiler::compile(ExprPtr const& expr)
         ASSERT (scope != Scope::kFUNCTION_SELF_REF);
         auto setIns = scope == Scope::kLOCAL ? kSET_LOCAL : kSET_GLOBAL;
         instructions().push_back(setIns);
-        auto bytes = integerToFourBytes(index);
-        for (Byte i : bytes)
-        {
-            instructions().push_back(i);
-        }
+        emitIndex(index);
         return;
     }
     if (auto variablePtr = dynamic_cast<Variable const*>(exprPtr))
     {
         auto const name = variablePtr->name();
-        auto [index, scope] = getIndex(name);
-        if (scope == Scope::kFUNCTION_SELF_REF)
+        auto const varInfo = resolve(name);
+        if (varInfo.second == Scope::kFUNCTION_SELF_REF)
         {
             instructions().push_back(kCURRENT_FUNCTION);
             return;
         }
-        auto getIns = scope == Scope::kLOCAL ? kGET_LOCAL : kGET_GLOBAL;
-        instructions().push_back(getIns);
-        auto bytes = integerToFourBytes(index);
-        for (Byte i : bytes)
-        {
-            instructions().push_back(i);
-        }
+        emitVar(varInfo);
         return;
     }
     if (auto ifPtr = dynamic_cast<If const*>(exprPtr))
@@ -138,7 +157,9 @@ void Compiler::compile(ExprPtr const& expr)
     }
     if (auto lambdaPtr = dynamic_cast<LambdaBase<CompoundProcedure> const*>(exprPtr))
     {
-        mFunc = FuncInfo{};
+        FuncInfo funcInfo{};
+        std::get<1>(funcInfo) = symbolTable().extend();
+        mFuncStack.push(funcInfo);
         if (!lambdaPtr->mName.empty())
         {
             defineCurrentFunction(lambdaPtr->mName);
@@ -151,17 +172,19 @@ void Compiler::compile(ExprPtr const& expr)
         }
         compile(lambdaPtr->mBody);
         instructions().push_back(kRET);
-        auto funcInstructions = std::get<0>(mFunc.value());
-        mFunc = {};
+        auto funcInstructions = std::get<0>(mFuncStack.top());
+        auto const freeVars = symbolTable().freeVariables();
+        mFuncStack.pop();
+        for (auto f : freeVars)
+        {
+            emitVar(f);
+        }
         auto const index = mCode.constantPool.size();
         auto const funcSym = FunctionSymbol{lambdaPtr->mName, args.size(), variadic, /* nbLocals= */ 0, funcInstructions};
         mCode.constantPool.push_back(funcSym);
-        instructions().push_back(kCONST);
-        auto bytes = integerToFourBytes(index);
-        for (Byte i : bytes)
-        {
-            instructions().push_back(i);
-        }
+        instructions().push_back(kCLOSURE);
+        emitIndex(index);
+        emitIndex(freeVars.size());
         return;
     }
     if (auto appPtr = dynamic_cast<Application const*>(exprPtr))
@@ -250,11 +273,7 @@ void Compiler::compile(ExprPtr const& expr)
             }
             compile(appPtr->mOperator);
             instructions().push_back(kCALL);
-            auto bytes = integerToFourBytes(appPtr->mOperands.size());
-            for (Byte i : bytes)
-            {
-                instructions().push_back(i);
-            }
+            emitIndex(appPtr->mOperands.size());
         }
         return;
     }
