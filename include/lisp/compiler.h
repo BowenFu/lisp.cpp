@@ -82,6 +82,10 @@ public:
     {
         return mOrigFreeVars;
     }
+    auto nbDefinitions() const
+    {
+        return mNbDefinitions;
+    }
 };
 
 class Compiler

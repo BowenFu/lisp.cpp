@@ -174,13 +174,14 @@ void Compiler::compile(ExprPtr const& expr)
         instructions().push_back(kRET);
         auto funcInstructions = std::get<0>(mFuncStack.top());
         auto const freeVars = symbolTable().freeVariables();
+        auto const nbLocals = symbolTable().nbDefinitions() - args.size();
         mFuncStack.pop();
         for (auto f : freeVars)
         {
             emitVar(f);
         }
         auto const index = mCode.constantPool.size();
-        auto const funcSym = FunctionSymbol{lambdaPtr->mName, args.size(), variadic, /* nbLocals= */ 0, funcInstructions};
+        auto const funcSym = FunctionSymbol{lambdaPtr->mName, args.size(), variadic, nbLocals, funcInstructions};
         mCode.constantPool.push_back(funcSym);
         instructions().push_back(kCLOSURE);
         emitIndex(index);

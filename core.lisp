@@ -235,3 +235,5 @@
         )
     )
 )
+
+(define (even num) (= (% num 2) 0)) 
