@@ -34,18 +34,22 @@ class Compiler
         if (mFunc)
         {
             auto const& funcInfo = mFunc.value();
-            if (name == std::get<2>(funcInfo))
-            {
-                return {0, Scope::kFUNCTION_SELF_REF};
-            }
             auto const map = std::get<1>(funcInfo);
             auto iter = map.find(name);
             if (iter != map.end())
             {
                 return {iter->second, Scope::kLOCAL};
             }
+            // first local args, then self
+            if (name == std::get<2>(funcInfo))
+            {
+                return {0, Scope::kFUNCTION_SELF_REF};
+            }
         }
-        auto const idx = mSymbolTable.at(name);
+
+        auto iter = mSymbolTable.find(name);
+        ASSERT_MSG(iter != mSymbolTable.end(), name);
+        auto const idx = iter->second;
         return {idx, Scope::kGLOBAL};
     }
     std::pair<Index, Scope> defineCurrentFunction(std::string const& name)
@@ -63,6 +67,7 @@ class Compiler
         auto const scope = mFunc ? Scope::kLOCAL : Scope::kGLOBAL;
         return {idx, scope};
     }
+    void emitIndex(size_t index);
 public:
     Compiler() = default;
     void compile(ExprPtr const& expr);

@@ -323,6 +323,16 @@ void VM::run()
             operandStack().push(mCallStack.top().func());
             break;
         }
+        case kCLOSURE:
+        {
+            uint32_t index = fourBytesToInteger<uint32_t>(&instructions()[mIp]);
+            mIp += 4;
+            uint32_t nbFreeVars = fourBytesToInteger<uint32_t>(&instructions()[mIp]);
+            mIp += 4;
+            ASSERT_MSG(nbFreeVars == 0, nbFreeVars);
+            operandStack().push(mCode.constantPool.at(index));
+            break;
+        }
         }
     }
 }
