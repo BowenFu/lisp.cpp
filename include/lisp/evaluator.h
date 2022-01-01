@@ -461,11 +461,17 @@ class LambdaBase : public Expr
     friend Compiler;
     Params mArguments;
     std::shared_ptr<Sequence> mBody;
+    std::string mName{};
 public:
     LambdaBase(Params const& arguments, std::shared_ptr<Sequence> body)
     : mArguments{arguments}
     , mBody{body}
+    , mName{}
     {
+    }
+    void setName(std::string const& name)
+    {
+        mName = name;
     }
     ExprPtr eval(std::shared_ptr<Env> const& env) override
     {

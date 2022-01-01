@@ -1,5 +1,7 @@
 #include "gtest/gtest.h"
 #include "lisp/compiler.h"
+#include "lisp/metaParser.h"
+#include "lisp/parser.h"
 #include <numeric>
 
 TEST(Compiler, number)
@@ -257,4 +259,43 @@ TEST(Compiler, consCar)
     vm.run();
     std::string output = testing::internal::GetCapturedStdout();
     EXPECT_EQ(output, "5.5\n");
+}
+
+auto sourceToBytecode(std::string const& source)
+{
+    Lexer lex(source);
+    MetaParser p(lex);
+    
+    Compiler c{};
+    while (!p.eof())
+    {
+        auto e = parse(p.sexpr());
+        c.compile(e);
+    }
+
+    return c.code();
+}
+
+TEST(Compiler, square)
+{
+    std::string const source = "(define square (lambda (y) (* y y))) (square 7)";
+    auto code = sourceToBytecode(source);
+    code.instructions.push_back(kPRINT);
+    VM vm{code};
+    testing::internal::CaptureStdout();
+    vm.run();
+    std::string output = testing::internal::GetCapturedStdout();
+    EXPECT_EQ(output, "49\n");
+}
+
+TEST(Compiler, factorial)
+{
+    std::string const source = "(define factorial (lambda (y) (if (= y 0) 1 (* y (factorial (- y 1)))))) (factorial 5)";
+    auto code = sourceToBytecode(source);
+    code.instructions.push_back(kPRINT);
+    VM vm{code};
+    testing::internal::CaptureStdout();
+    vm.run();
+    std::string output = testing::internal::GetCapturedStdout();
+    EXPECT_EQ(output, "120\n");
 }

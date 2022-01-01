@@ -53,12 +53,13 @@ void Compiler::compile(ExprPtr const& expr)
     }
     if (auto defPtr = dynamic_cast<Definition const*>(exprPtr))
     {
-        compile(defPtr->mValue);
-        if (auto* funcSymPtr = std::get_if<FunctionSymbol>(&mCode.constantPool.back()))
+        if (auto lambdaPtr = dynamic_cast<LambdaBase<CompoundProcedure>*>(defPtr->mValue.get()))
         {
-            funcSymPtr->setName(defPtr->mVariableName);
+            lambdaPtr->setName(defPtr->mVariableName);
         }
+        compile(defPtr->mValue);
         auto [index, scope] = define(defPtr->mVariableName);
+        ASSERT (scope != Scope::kFUNCTION_SELF_REF);
         auto setIns = scope == Scope::kLOCAL ? kSET_LOCAL : kSET_GLOBAL;
         instructions().push_back(setIns);
         auto bytes = integerToFourBytes(index);
@@ -72,6 +73,11 @@ void Compiler::compile(ExprPtr const& expr)
     {
         auto const name = variablePtr->name();
         auto [index, scope] = getIndex(name);
+        if (scope == Scope::kFUNCTION_SELF_REF)
+        {
+            instructions().push_back(kCURRENT_FUNCTION);
+            return;
+        }
         auto getIns = scope == Scope::kLOCAL ? kGET_LOCAL : kGET_GLOBAL;
         instructions().push_back(getIns);
         auto bytes = integerToFourBytes(index);
@@ -132,20 +138,23 @@ void Compiler::compile(ExprPtr const& expr)
     }
     if (auto lambdaPtr = dynamic_cast<LambdaBase<CompoundProcedure> const*>(exprPtr))
     {
-        // FIXME: find a place for function def.
         mFunc = FuncInfo{};
+        if (!lambdaPtr->mName.empty())
+        {
+            defineCurrentFunction(lambdaPtr->mName);
+        }
         auto const& [args, variadic] = lambdaPtr->mArguments;
         for (auto const& arg : args)
         {
-            auto [idx, scope] = define(arg);
+            auto [_, scope] = define(arg);
             ASSERT(scope == Scope::kLOCAL);
         }
         compile(lambdaPtr->mBody);
         instructions().push_back(kRET);
-        auto funcInstructions = mFunc.value().first;
+        auto funcInstructions = std::get<0>(mFunc.value());
         mFunc = {};
         auto const index = mCode.constantPool.size();
-        auto const funcSym = FunctionSymbol{args.size(), variadic, /* nbLocals= */ 0, funcInstructions};
+        auto const funcSym = FunctionSymbol{lambdaPtr->mName, args.size(), variadic, /* nbLocals= */ 0, funcInstructions};
         mCode.constantPool.push_back(funcSym);
         instructions().push_back(kCONST);
         auto bytes = integerToFourBytes(index);
@@ -179,7 +188,7 @@ void Compiler::compile(ExprPtr const& expr)
                 ASSERT(nbOperands == 2U);
                 return kDIV;
             }
-            else if (opName == "==")
+            else if (opName == "=")
             {
                 ASSERT(nbOperands == 2U);
                 return kEQUAL;
