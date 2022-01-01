@@ -9,7 +9,8 @@ enum class Scope
 {
     kLOCAL,
     kGLOBAL,
-    kFUNCTION_SELF_REF
+    kFUNCTION_SELF_REF,
+    kFREE
 };
 
 class CurrentFunctionIndex
@@ -21,37 +22,65 @@ using VarInfo = std::pair<size_t, Scope>;
 class SymbolTable
 {
     std::map<std::string, VarInfo> mNameToVarInfo{};
-    SymbolTable const* mEnclosing{};
+    std::vector<VarInfo> mOrigFreeVars{};
+    size_t mNbDefinitions{};
+    SymbolTable* mEnclosing{};
 public:
     SymbolTable() = default;
-    SymbolTable(SymbolTable const* const enclosing)
+    SymbolTable(SymbolTable* const enclosing)
     : mEnclosing{enclosing}
     {}
-    auto extend() const
+    auto extend()
     {
         return SymbolTable(this);
     }
+    auto defineFreeVar(std::string const& name, VarInfo const& orig)
+    {
+        auto freeIndex = mOrigFreeVars.size();
+        mOrigFreeVars.push_back(orig);
+        auto const freeVar = VarInfo{freeIndex, Scope::kFREE};
+        mNameToVarInfo[name] = freeVar;
+        return freeVar;
+    }
     std::optional<VarInfo> resolve(std::string const& name)
     {
-        auto const* symTable = this;
-        do
+        // found
+        auto const& map = mNameToVarInfo;
+        auto const iter = map.find(name);
+        if (iter != map.end())
         {
-            auto const& map = symTable->mNameToVarInfo;
-            auto const iter = map.find(name);
-            if (iter != map.end())
+            return iter->second;
+        }
+
+        // enclosing
+        if (mEnclosing)
+        {
+            auto const opVarInfo = mEnclosing->resolve(name);
+            if (opVarInfo.has_value())
             {
-                return iter->second;
+                auto const varInfo = opVarInfo.value();
+                if (varInfo.second == Scope::kGLOBAL)
+                {
+                    return varInfo;
+                }
+                return defineFreeVar(name, varInfo);
             }
-            symTable = symTable->mEnclosing;
-        } while (symTable != nullptr);
+        }
+
         return {};
     }
+
     VarInfo define(std::string const& name, Scope scope)
     {
-        auto const index = mNameToVarInfo.size();
+        auto const index = mNbDefinitions;
         auto const varInfo = VarInfo{index, scope};
         mNameToVarInfo[name] = varInfo;
+        ++mNbDefinitions;
         return varInfo;
+    }
+    auto freeVariables() const
+    {
+        return mOrigFreeVars;
     }
 };
 
@@ -69,6 +98,8 @@ class Compiler
     {
         return mFuncStack.empty() ? mSymbolTable : std::get<1>(mFuncStack.top());
     }
+    void emitVar(VarInfo const& varInfo);
+    void emitIndex(size_t index);
     VarInfo resolve(std::string const& name)
     {
         if (mFuncStack.empty())
@@ -103,7 +134,6 @@ class Compiler
         auto const scope = mFuncStack.empty() ? Scope::kGLOBAL : Scope::kLOCAL;
         return symbolTable().define(name, scope);
     }
-    void emitIndex(size_t index);
 public:
     Compiler() = default;
     void compile(ExprPtr const& expr);

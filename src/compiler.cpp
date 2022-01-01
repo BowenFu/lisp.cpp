@@ -23,6 +23,30 @@ void Compiler::emitIndex(size_t index)
     }
 }
 
+void Compiler::emitVar(VarInfo const& varInfo)
+{
+    switch (varInfo.second)
+    {
+    case Scope::kGLOBAL:
+        instructions().push_back(kGET_GLOBAL);
+        emitIndex(varInfo.first);
+        break;
+    
+    case Scope::kLOCAL:
+        instructions().push_back(kGET_LOCAL);
+        emitIndex(varInfo.first);
+        break;
+    
+    case Scope::kFREE:
+        instructions().push_back(kGET_FREE);
+        emitIndex(varInfo.first);
+        break;
+
+    case Scope::kFUNCTION_SELF_REF:
+        FAIL_("Never reach here!");
+    }
+}
+
 void Compiler::compile(ExprPtr const& expr)
 {
     auto const exprPtr = expr.get();
@@ -73,15 +97,13 @@ void Compiler::compile(ExprPtr const& expr)
     if (auto variablePtr = dynamic_cast<Variable const*>(exprPtr))
     {
         auto const name = variablePtr->name();
-        auto [index, scope] = resolve(name);
-        if (scope == Scope::kFUNCTION_SELF_REF)
+        auto const varInfo = resolve(name);
+        if (varInfo.second == Scope::kFUNCTION_SELF_REF)
         {
             instructions().push_back(kCURRENT_FUNCTION);
             return;
         }
-        auto getIns = scope == Scope::kLOCAL ? kGET_LOCAL : kGET_GLOBAL;
-        instructions().push_back(getIns);
-        emitIndex(index);
+        emitVar(varInfo);
         return;
     }
     if (auto ifPtr = dynamic_cast<If const*>(exprPtr))
@@ -151,14 +173,18 @@ void Compiler::compile(ExprPtr const& expr)
         compile(lambdaPtr->mBody);
         instructions().push_back(kRET);
         auto funcInstructions = std::get<0>(mFuncStack.top());
+        auto const freeVars = symbolTable().freeVariables();
         mFuncStack.pop();
+        for (auto f : freeVars)
+        {
+            emitVar(f);
+        }
         auto const index = mCode.constantPool.size();
         auto const funcSym = FunctionSymbol{lambdaPtr->mName, args.size(), variadic, /* nbLocals= */ 0, funcInstructions};
         mCode.constantPool.push_back(funcSym);
         instructions().push_back(kCLOSURE);
         emitIndex(index);
-        // nbFreeVars
-        emitIndex(0);
+        emitIndex(freeVars.size());
         return;
     }
     if (auto appPtr = dynamic_cast<Application const*>(exprPtr))

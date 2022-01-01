@@ -25,6 +25,9 @@ enum OpCode : Byte
     kRET,
     kGET_LOCAL,
     kSET_LOCAL,
+    kSET_GLOBAL,
+    kGET_GLOBAL,
+    kGET_FREE,
     kTRUE,
     kFALSE,
     kEQUAL,
@@ -34,8 +37,6 @@ enum OpCode : Byte
     kMINUS,
     kJUMP,
     kJUMP_IF_NOT_TRUE,
-    kSET_GLOBAL,
-    kGET_GLOBAL,
     kPOP,
     kCONS,
     kCAR,
@@ -155,19 +156,19 @@ class VM;
 
 class StackFrame
 {
-    ClosurePtr const mFunc;
+    ClosurePtr const mClosure;
     std::vector<Object> mLocals;
     size_t mReturnAddress;
 public:
     StackFrame(ClosurePtr const& func, std::vector<Object>&& locals, size_t returnAddress)
-    : mFunc{func}
+    : mClosure{func}
     , mLocals{std::move(locals)}
     , mReturnAddress{returnAddress}
     {
     }
-    auto const& func() const
+    auto const& closure() const
     {
-        return mFunc;
+        return mClosure;
     }
     auto returnAddress() const
     {
@@ -203,7 +204,7 @@ public:
     }
     auto const& instructions() const
     {
-        return mCallStack.empty() ? mCode.instructions : mCallStack.top().func()->funcSym().instructions();
+        return mCallStack.empty() ? mCode.instructions : mCallStack.top().closure()->funcSym().instructions();
     }
 private:
     ByteCode mCode{};

@@ -4,7 +4,7 @@
 
 std::ostream& operator << (std::ostream& o, StackFrame const& f)
 {
-    return o << "StackFrame " << f.func()->funcSym().name();
+    return o << "StackFrame " << f.closure()->funcSym().name();
 }
 
 std::ostream& operator << (std::ostream& o, FunctionSymbol const& f)
@@ -140,12 +140,43 @@ void VM::run()
                 }
 
                 default:
+                    FAIL_("Unsupported op");
+                }
+            }
+            else if (auto lhsStrPtr = std::get_if<std::string>(&lhs))
+            {
+                auto lhsStr = *lhsStrPtr;
+                auto rhsStr = std::get<std::string>(rhs);
+                switch (opCode)
+                {
+                case kADD:
+                {
+                    auto result = lhsStr + rhsStr;
+                    operandStack().push(result);
                     break;
+                }
+                
+                case kEQUAL:
+                {
+                    bool result = lhsStr == rhsStr;
+                    operandStack().push(result);
+                    break;
+                }
+
+                case kNOT_EQUAL:
+                {
+                    bool result = lhsStr != rhsStr;
+                    operandStack().push(result);
+                    break;
+                }
+
+                default:
+                    FAIL_("Unsupported op");
                 }
             }
             else
             {
-                FAIL_("Not supported yet!");
+                FAIL_("Unsupported operand type!");
             }
             break;
         }
@@ -217,7 +248,7 @@ void VM::run()
                 }
             }
 
-            mCallStack.push(StackFrame{std::make_shared<Closure>(functionSymbol, std::vector<Object>{}), std::move(params), mIp});
+            mCallStack.push(StackFrame{*closurePtrPtr, std::move(params), mIp});
             mIp = 0;
             break;
         }
@@ -325,7 +356,7 @@ void VM::run()
         }
         case kCURRENT_FUNCTION:
         {
-            operandStack().push(mCallStack.top().func());
+            operandStack().push(mCallStack.top().closure());
             break;
         }
         case kCLOSURE:
@@ -334,10 +365,23 @@ void VM::run()
             mIp += 4;
             uint32_t nbFreeVars = fourBytesToInteger<uint32_t>(&instructions()[mIp]);
             mIp += 4;
-            ASSERT_MSG(nbFreeVars == 0, nbFreeVars);
+            auto freeVars = std::vector<Object>(nbFreeVars);
+            for (size_t i = nbFreeVars; i > 0; --i)
+            {
+                freeVars[i-1] = operandStack().top();
+                operandStack().pop();
+            }
             auto const funcSym = mCode.constantPool.at(index);
-            auto const closurePtr = std::make_shared<Closure>(std::get<FunctionSymbol>(funcSym), std::vector<Object>{});
+            auto const closurePtr = std::make_shared<Closure>(std::get<FunctionSymbol>(funcSym), freeVars);
             operandStack().push(closurePtr);
+            break;
+        }
+        case kGET_FREE:
+        {
+            uint32_t index = fourBytesToInteger<uint32_t>(&instructions()[mIp]);
+            mIp += 4;
+
+            operandStack().push(mCallStack.top().closure()->freeVars().at(index));
             break;
         }
         }
