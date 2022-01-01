@@ -7,6 +7,7 @@
 #include <string>
 #include <variant>
 #include <memory>
+#include "meta.h"
 
 using Byte = uint8_t;
 
@@ -168,6 +169,7 @@ public:
     }
     auto const& closure() const
     {
+        ASSERT(mClosure);
         return mClosure;
     }
     auto returnAddress() const
