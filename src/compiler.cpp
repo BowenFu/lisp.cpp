@@ -94,6 +94,11 @@ void Compiler::emitApplication(Application const& app)
             ASSERT(nbOperands == 2U);
             emitBinaryOps(kDIV);
         }
+        else if (opName == "%")
+        {
+            ASSERT(nbOperands == 2U);
+            emitBinaryOps(kMOD);
+        }
         else if (opName == "=")
         {
             ASSERT(nbOperands == 2U);
@@ -129,10 +134,25 @@ void Compiler::emitApplication(Application const& app)
             ASSERT(nbOperands == 1U);
             emitUnaryOp(kCDR);
         }
+        else if (opName == "cons?")
+        {
+            ASSERT(nbOperands == 1U);
+            emitUnaryOp(kIS_CONS);
+        }
+        else if (opName == "null?")
+        {
+            ASSERT(nbOperands == 1U);
+            emitUnaryOp(kIS_NULL);
+        }
         else if (opName == "show")
         {
             ASSERT(nbOperands == 1U);
             emitUnaryOp(kPRINT);
+        }
+        else if (opName == "error")
+        {
+            ASSERT(nbOperands == 1U);
+            emitUnaryOp(kERROR);
         }
         else
         {

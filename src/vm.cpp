@@ -1,6 +1,7 @@
 #include "lisp/vm.h"
 #include "lisp/meta.h"
 #include <iostream>
+#include <cmath>
 
 std::ostream& operator << (std::ostream& o, StackFrame const& f)
 {
@@ -76,6 +77,7 @@ void VM::run()
         case kSUB:
         case kMUL:
         case kDIV:
+        case kMOD:
         case kEQUAL:
         case kNOT_EQUAL:
         case kGREATER_THAN:
@@ -114,6 +116,15 @@ void VM::run()
                 case kDIV:
                 {
                     double result = lhsD / rhsD;
+                    operandStack().push(result);
+                    break;
+                }
+                
+                case kMOD:
+                {
+                    ASSERT(std::trunc(lhsD) == lhsD);
+                    ASSERT(std::trunc(rhsD) == rhsD);
+                    double result = static_cast<int32_t>(lhsD) % static_cast<int32_t>(rhsD);
                     operandStack().push(result);
                     break;
                 }
@@ -206,6 +217,13 @@ void VM::run()
             auto op = operandStack().top();
             operandStack().pop();
             std::cout << op << std::endl;
+            break;
+        }
+        case kERROR:
+        {
+            auto op = operandStack().top();
+            operandStack().pop();
+            std::cout << "Error : " << op << std::endl;
             break;
         }
         case kHALT:
@@ -383,6 +401,22 @@ void VM::run()
             mIp += 4;
 
             operandStack().push(mCallStack.top().closure()->freeVars().at(index));
+            break;
+        }
+        case kIS_CONS:
+        {
+            auto const obj = operandStack().top();
+            operandStack().pop();
+            auto const consPtrPtr = std::get_if<ConsPtr>(&obj);
+            operandStack().push(consPtrPtr != nullptr);
+            break;
+        }
+        case kIS_NULL:
+        {
+            auto const obj = operandStack().top();
+            operandStack().pop();
+            auto const nilPtr = std::get_if<VMNil>(&obj);
+            operandStack().push(nilPtr != nullptr);
             break;
         }
         }

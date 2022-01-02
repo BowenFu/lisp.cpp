@@ -43,7 +43,11 @@ enum OpCode : Byte
     kCAR,
     kCDR,
     kCURRENT_FUNCTION,
-    kCLOSURE
+    kCLOSURE,
+    kIS_CONS,
+    kIS_NULL,
+    kERROR,
+    kMOD,
 };
 
 using Instructions = std::vector<Byte>;
