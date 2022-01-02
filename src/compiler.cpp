@@ -62,7 +62,7 @@ void Compiler::emitApplication(Application const& app)
         for (auto i = 1U; i < nbOperands; ++i)
         {
             compile(app.mOperands.at(i));
-            instructions().push_back(static_cast<OpCode>(opCode));
+            instructions().push_back(opCode);
         }
     };
     bool isPrimitive = true;
