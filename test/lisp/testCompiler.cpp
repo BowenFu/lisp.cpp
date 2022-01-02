@@ -335,3 +335,14 @@ TEST(Compiler, localBinding)
     std::string output = testing::internal::GetCapturedStdout();
     EXPECT_EQ(output, "1\n");
 }
+
+TEST(Compiler, show)
+{
+    std::string const source = " (define (show-cons car cdr) (define x car) (define y cdr) (lambda (dispatch) (show (if (= dispatch 'show-car) x y)))) ((show-cons 1 2) 'show-car)";
+    auto code = sourceToBytecode(source);
+    VM vm{code};
+    testing::internal::CaptureStdout();
+    vm.run();
+    std::string output = testing::internal::GetCapturedStdout();
+    EXPECT_EQ(output, "1\n");
+}

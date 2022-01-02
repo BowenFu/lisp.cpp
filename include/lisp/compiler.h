@@ -104,6 +104,7 @@ class Compiler
     }
     void emitVar(VarInfo const& varInfo);
     void emitIndex(size_t index);
+    void emitApplication(Application const& app);
     VarInfo resolve(std::string const& name)
     {
         if (mFuncStack.empty())

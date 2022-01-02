@@ -47,6 +47,111 @@ void Compiler::emitVar(VarInfo const& varInfo)
     }
 }
 
+void Compiler::emitApplication(Application const& app)
+{
+    auto nbOperands = app.mOperands.size();
+    auto const emitUnaryOp = [&app, this, nbOperands](OpCode opCode)
+    {
+        ASSERT (nbOperands == 1)
+        compile(app.mOperands.at(0));
+        instructions().push_back(static_cast<OpCode>(opCode));
+    };
+    auto const emitBinaryOps = [&app, this, nbOperands](OpCode opCode)
+    {
+        compile(app.mOperands.at(0));
+        for (auto i = 1U; i < nbOperands; ++i)
+        {
+            compile(app.mOperands.at(i));
+            instructions().push_back(static_cast<OpCode>(opCode));
+        }
+    };
+    bool isPrimitive = true;
+    // primitive procedure
+    {
+        auto opName = app.mOperator->toString();
+        if (opName == "+")
+        {
+            emitBinaryOps(kADD);
+        }
+        else if (opName == "-")
+        {
+            ASSERT(nbOperands == 2U || nbOperands == 1U);
+            if (nbOperands == 2U)
+            {
+                emitBinaryOps(kSUB);
+            }
+            else
+            {
+                emitUnaryOp(kMINUS);
+            }
+        }
+        else if (opName == "*")
+        {
+            emitBinaryOps(kMUL);
+        }
+        else if (opName == "/")
+        {
+            ASSERT(nbOperands == 2U);
+            emitBinaryOps(kDIV);
+        }
+        else if (opName == "=")
+        {
+            ASSERT(nbOperands == 2U);
+            emitBinaryOps(kEQUAL);
+        }
+        else if (opName == "!=")
+        {
+            ASSERT(nbOperands == 2U);
+            emitBinaryOps(kNOT_EQUAL);
+        }
+        else if (opName == ">")
+        {
+            ASSERT(nbOperands == 2U);
+            emitBinaryOps(kGREATER_THAN);
+        }
+        else if (opName == "!")
+        {
+            ASSERT(nbOperands == 1U);
+            emitUnaryOp(kNOT);
+        }
+        else if (opName == "cons")
+        {
+            ASSERT(nbOperands == 2U);
+            emitBinaryOps(kCONS);
+        }
+        else if (opName == "car")
+        {
+            ASSERT(nbOperands == 1U);
+            emitUnaryOp(kCAR);
+        }
+        else if (opName == "cdr")
+        {
+            ASSERT(nbOperands == 1U);
+            emitUnaryOp(kCDR);
+        }
+        else if (opName == "show")
+        {
+            ASSERT(nbOperands == 1U);
+            emitUnaryOp(kPRINT);
+        }
+        else
+        {
+            isPrimitive = false;
+        }
+    }
+    // lambda procedure.
+    if (isPrimitive == false)
+    {
+        for (auto const &o : app.mOperands)
+        {
+            compile(o);
+        }
+        compile(app.mOperator);
+        instructions().push_back(kCALL);
+        emitIndex(app.mOperands.size());
+    }
+}
+
 void Compiler::compile(ExprPtr const& expr)
 {
     auto const exprPtr = expr.get();
@@ -189,92 +294,7 @@ void Compiler::compile(ExprPtr const& expr)
     }
     if (auto appPtr = dynamic_cast<Application const*>(exprPtr))
     {
-        auto nbOperands = appPtr->mOperands.size();
-        int32_t opCode = [appPtr, nbOperands] () -> int32_t
-        {
-            auto opName = appPtr->mOperator->toString();
-            if (opName == "+")
-            {
-                return kADD;
-            }
-            else if (opName == "-")
-            {
-                ASSERT(nbOperands == 2U || nbOperands == 1U);
-                return nbOperands == 2U ? kSUB : kMINUS;
-            }
-            else if (opName == "*")
-            {
-                return kMUL;
-            }
-            else if (opName == "/")
-            {
-                ASSERT(nbOperands == 2U);
-                return kDIV;
-            }
-            else if (opName == "=")
-            {
-                ASSERT(nbOperands == 2U);
-                return kEQUAL;
-            }
-            else if (opName == "!=")
-            {
-                ASSERT(nbOperands == 2U);
-                return kNOT_EQUAL;
-            }
-            else if (opName == ">")
-            {
-                ASSERT(nbOperands == 2U);
-                return kGREATER_THAN;
-            }
-            else if (opName == "!")
-            {
-                ASSERT(nbOperands == 1U);
-                return kNOT;
-            }
-            else if (opName == "cons")
-            {
-                ASSERT(nbOperands == 2U);
-                return kCONS;
-            }
-            else if (opName == "car")
-            {
-                ASSERT(nbOperands == 1U);
-                return kCAR;
-            }
-            else if (opName == "cdr")
-            {
-                ASSERT(nbOperands == 1U);
-                return kCDR;
-            }
-            return -1;
-        }();
-        // primitive procedure
-        if (opCode >= 0)
-        {
-            if (nbOperands == 1)
-            {
-                compile(appPtr->mOperands.at(0));
-                instructions().push_back(static_cast<OpCode>(opCode));
-                return;
-            }
-            compile(appPtr->mOperands.at(0));
-            for (auto i = 1U; i < nbOperands; ++i)
-            {
-                compile(appPtr->mOperands.at(i));
-                instructions().push_back(static_cast<OpCode>(opCode));
-            }
-            return;
-        }
-        // lambda procedure.
-        {
-            for (auto const& o : appPtr->mOperands)
-            {
-                compile(o);
-            }
-            compile(appPtr->mOperator);
-            instructions().push_back(kCALL);
-            emitIndex(appPtr->mOperands.size());
-        }
+        emitApplication(*appPtr);
         return;
     }
     FAIL_("Not supported yet!");
