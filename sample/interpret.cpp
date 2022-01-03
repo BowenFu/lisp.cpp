@@ -207,15 +207,15 @@ auto eval(std::string const& input, std::shared_ptr<Env> const& env, std::shared
     {
         auto me = p.sexpr();
 #if DEBUG
-        std::cout << "me ## " << me->toString() << std::endl; 
+        std::cout << "me ## " << me->toString() << std::endl;
 #endif // DEBUG
         auto ee = expandMacros(me, macroEnv);
 #if DEBUG
-        std::cout << "ee ## " << ee->toString() << std::endl; 
+        std::cout << "ee ## " << ee->toString() << std::endl;
 #endif // DEBUG
         auto e = parse(ee);
 #if DEBUG
-        std::cout << "e ## " << e->toString() << std::endl; 
+        std::cout << "e ## " << e->toString() << std::endl;
 #endif // DEBUG
         result = e->eval(env)->toString();
     } while (!p.eof());
