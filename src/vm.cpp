@@ -4,25 +4,27 @@
 #include <cmath>
 
 namespace vm{
-std::ostream& operator << (std::ostream& o, StackFrame const& f)
+void print(std::ostream& o, StackFrame const& f)
 {
-    return o << "StackFrame " << f.closure()->funcSym().name();
+    o << "StackFrame " << f.closure()->funcSym().name();
 }
 
-std::ostream& operator << (std::ostream& o, FunctionSymbol const& f)
+void print(std::ostream& o, FunctionSymbol const& f)
 {
-    return o << "Function " << f.name();
+    o << "Function " << f.name();
 }
 
-std::ostream& operator << (std::ostream& o, ClosurePtr const& c)
+void print(std::ostream& o, ClosurePtr const& c)
 {
-    return o << "Closure " << c->funcSym().name();
+    o << "Closure " << c->funcSym().name();
 }
 
-std::ostream& operator << (std::ostream& o, VMNull)
+void print(std::ostream& o, VMNull)
 {
-    return o << "null";
+    o << "null";
 }
+
+constexpr bool operator== (ConsPtr const& lhs, ConsPtr const& rhs);
 
 bool operator== (FunctionSymbol const& lhs, FunctionSymbol const& rhs)
 {
@@ -40,6 +42,11 @@ constexpr bool operator== (Literal<T> const& lhs, Literal<T> const& rhs)
 }
 
 bool operator== (Symbol const& lhs, Symbol const& rhs)
+{
+    return lhs.value == rhs.value;
+}
+
+bool operator== (Splicing const& lhs, Splicing const& rhs)
 {
     return lhs.value == rhs.value;
 }
@@ -63,19 +70,19 @@ constexpr bool operator== (ConsPtr const& lhs, ConsPtr const& rhs)
 }
 
 template <typename T>
-std::ostream& operator << (std::ostream& o, Literal<T> const& obj)
+void print(std::ostream& o, Literal<T> const& obj)
 {
-    return o << obj.value;
+    o << std::boolalpha << obj.value;
 }
 
-std::ostream& operator << (std::ostream& o, Symbol const& obj)
+void print(std::ostream& o, Symbol const& obj)
 {
-    return o << obj.value;
+    o << obj.value;
 }
 
-std::ostream& operator << (std::ostream& o, String const& obj)
+void print(std::ostream& o, String const& obj)
 {
-    return o << "\"" << obj.value << "\"";
+    o << "\"" << obj.value << "\"";
 }
 
 std::ostream& operator << (std::ostream& o, Object const& obj);
@@ -100,27 +107,70 @@ std::string VMCons::toString() const
     o << ")";
     return o.str();
 }
-} // namespace vm
 
-namespace std
-{
-std::ostream& operator << (std::ostream& o, vm::ConsPtr const& cons_)
+void print(std::ostream& o, vm::ConsPtr const& cons_)
 {
     ASSERT(cons_);
     o << cons_->toString();
-    return o;
-}
 }
 
-namespace vm
+void print(std::ostream& o, vm::Splicing const& spl)
 {
+    print(o, spl.value);
+}
+
 std::ostream& operator << (std::ostream& o, Object const& obj)
 {
     std::visit([&o](auto op)
     {
-        o << std::boolalpha << op;
+        print(o, op);
     }, obj);
     return o;
+}
+
+auto deCons(Object const& obj)
+{
+    auto consPtrPtr = std::get_if<ConsPtr>(&obj);
+    ASSERT(consPtrPtr);
+    ASSERT(consPtrPtr->get());
+    return std::make_pair(consPtrPtr->get()->car(), consPtrPtr->get()->cdr());
+}
+
+std::vector<Object> consToVec(ConsPtr const& cons_)
+{
+    std::vector<Object> vec;
+    Object me = cons_;
+    while (!std::get_if<VMNull>(&me))
+    {
+        auto [car, cdr] = deCons(me);
+        vec.push_back(car);
+        me = cdr;
+    }
+    return vec;
+}
+
+Object vecToCons(std::vector<Object> const& vec)
+{
+    Object result = vmNull;
+    auto vecSize = vec.size();
+    auto i = vec.rbegin();
+    if (vecSize >= 2)
+    {
+        auto dot = vec.at(vecSize - 2);
+        auto dotPtr = std::get_if<Symbol>(&dot);
+        if (dotPtr != nullptr && dotPtr->value == ".")
+        {
+            ASSERT(vecSize >=3);
+            ++i;
+            ++i;
+            result = vec.back();
+        }
+    }
+    for (;i != vec.rend(); ++i)
+    {
+        result = cons(*i, result);
+    }
+    return result;
 }
 
 
@@ -416,13 +466,30 @@ void VM::run()
             operandStack().pop();
             break;
         }
+        case kSPLICING:
+        {
+            auto const op = operandStack().top();
+            operandStack().pop();
+            operandStack().push(Splicing{std::get<ConsPtr>(op)});
+            break;
+        }
         case kCONS:
         {
-            auto const rhs = operandStack().top();
+            auto const cdr = operandStack().top();
             operandStack().pop();
-            auto const lhs = operandStack().top();
+            auto const car = operandStack().top();
             operandStack().pop();
-            operandStack().push(cons(lhs, rhs));
+            if (auto const splicingPtr = std::get_if<Splicing>(&car))
+            {
+                auto vec = consToVec(splicingPtr->value); 
+                vec.push_back(Symbol{"."});
+                vec.push_back(cdr);
+                operandStack().push(vecToCons(vec));
+            }
+            else
+            {
+                operandStack().push(cons(car, cdr));
+            }
             break;
         }
         case kCAR:

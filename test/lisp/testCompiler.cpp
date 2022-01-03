@@ -358,7 +358,7 @@ TEST(Compiler, len)
     EXPECT_EQ(output, "0\n");
 }
 
-TEST(Compiler, list_star)
+TEST(Compiler, listStar)
 {
     std::string const source = "(define list*"
                                 "(lambda args"
@@ -379,4 +379,37 @@ TEST(Compiler, list_star)
     vm.run();
     std::string output = testing::internal::GetCapturedStdout();
     EXPECT_EQ(output, "(1 . 2)\n");
+}
+
+TEST(Compiler, unquote)
+{
+    std::string const source = "(print `(1 `,(+ 1 ,(+ 2 3)) 4))";
+    auto code = sourceToBytecode(source);
+    vm::VM vm{code};
+    testing::internal::CaptureStdout();
+    vm.run();
+    std::string output = testing::internal::GetCapturedStdout();
+    EXPECT_EQ(output, "(1 ('quasiquote ('unquote ('+ 1 5))) 4)\n");
+}
+
+TEST(Compiler, splicing1)
+{
+    std::string const source = "(print `(,@`(1 2 3) 4 5))";
+    auto code = sourceToBytecode(source);
+    vm::VM vm{code};
+    testing::internal::CaptureStdout();
+    vm.run();
+    std::string output = testing::internal::GetCapturedStdout();
+    EXPECT_EQ(output, "(1 2 3 4 5)\n");
+}
+
+TEST(Compiler, splicing2)
+{
+    std::string const source = "(print `(1 ```,,@,,@`(+ 1 2) 4))";
+    auto code = sourceToBytecode(source);
+    vm::VM vm{code};
+    testing::internal::CaptureStdout();
+    vm.run();
+    std::string output = testing::internal::GetCapturedStdout();
+    EXPECT_EQ(output, "(1 ('quasiquote ('quasiquote ('quasiquote ('unquote ('unquote-splicing ('unquote '+ 1 2)))))) 4)\n");
 }

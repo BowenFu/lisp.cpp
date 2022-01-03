@@ -329,5 +329,11 @@ void Compiler::compile(ExprPtr const& expr)
         instructions().push_back(vm::kCONS);
         return;
     }
+    if (auto splicingPtr = dynamic_cast<Splicing const*>(exprPtr))
+    {
+        compile(splicingPtr->get());
+        instructions().push_back(vm::kSPLICING);
+        return;
+    }
     FAIL_MSG("Not supported yet!", exprPtr->toString());
 }

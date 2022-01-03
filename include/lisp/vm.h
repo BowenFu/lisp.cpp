@@ -50,6 +50,7 @@ enum OpCode : Byte
     kIS_NULL,
     kERROR,
     kMOD,
+    kSPLICING,
 };
 
 using Instructions = std::vector<Byte>;
@@ -121,7 +122,13 @@ public:
     std::string value;
 };
 
-using Object = std::variant<Bool, Int, Double, String, Symbol, FunctionSymbol, ClosurePtr, ConsPtr, VMNull>;
+class Splicing
+{
+public:
+    ConsPtr value;
+};
+
+using Object = std::variant<Bool, Int, Double, String, Symbol, FunctionSymbol, ClosurePtr, ConsPtr, VMNull, Splicing>;
 
 class Closure
 {
