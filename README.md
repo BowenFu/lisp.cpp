@@ -1,10 +1,42 @@
 # lisp.cpp
 
-lisp : a simple lisp interpreter / compiler in C++ with scheme style syntax + quote / unquote style macros.
+### lisp.cpp : a simple lisp interpreter / compiler in C++ with scheme style syntax + quote / unquote style macros.
 
 The interpreter is inspired by SICP.
 
 The macro system and the compiler is inspired by `Writing an interpreter / a compiler in Go`.
+
+### Interpreter sample
+
+```bash
+$ build/bin/interpret
+
+;;; M-Eval input:
+(define x '(2 3))
+
+;;; M-Eval value:
+(2 3)
+
+;;; M-Eval input:
+`(,@x 1)
+
+;;; M-Eval value:
+(2 3 1)
+
+;;; M-Eval input:
+
+```
+
+### Compiler sample
+
+```bash
+$ build/bin/compile "(define x '(2 3)) \`(,@x 1)" 
+(2 3 1)
+```
+
+Refer to `core.lisp` and `sample/CMakeLists.txt` for more samples.
+
+All macros are defined in `core.lisp`.
 
 <!-- ![lisp](./lisp.svg) -->
 
