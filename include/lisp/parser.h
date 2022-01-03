@@ -48,7 +48,7 @@ inline Params parseParams(ExprPtr const& expr)
         params.push_back(e->get());
         return std::make_pair(params, true);
     }
-    while (me != nil())
+    while (me != null())
     {
         auto cons = dynamic_cast<Cons*>(me.get());
         if (!cons)
@@ -69,7 +69,7 @@ inline Params parseParams(ExprPtr const& expr)
 inline ExprPtr listBack(ExprPtr const& expr)
 {
     auto [car, cdr] = deCons(expr);
-    ASSERT(cdr == nil());
+    ASSERT(cdr == null());
     return car;
 }
 
@@ -77,7 +77,7 @@ inline std::vector<ExprPtr> parseActions(ExprPtr const& expr)
 {
     std::vector<ExprPtr> actions;
     auto me = expr;
-    while (me != nil())
+    while (me != null())
     {
         auto [car, cdr] = deCons(me);
         actions.push_back(parse(car));
@@ -101,7 +101,7 @@ inline ExprPtr assertIsLastAndGet(ExprPtr const& expr)
     ASSERT(car);
     // assert expr is the last one
     auto cdr = e->cdr();
-    ASSERT(cdr == nil());
+    ASSERT(cdr == null());
     return car;
 }
 
@@ -375,9 +375,9 @@ inline ExprPtr unquote(ExprPtr const& expr)
 
 inline auto consToQuoted(ExprPtr const& expr, std::optional<int32_t> quasiquoteLevel) -> ExprPtr
 {
-    if (expr == nil())
+    if (expr == null())
     {
-        return nil();
+        return null();
     }
     auto cons = dynamic_cast<Cons*>(expr.get());
     ASSERT(cons);

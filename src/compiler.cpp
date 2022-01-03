@@ -1,9 +1,9 @@
 #include "lisp/compiler.h"
 #include <array>
 
-auto integerToFourBytes(size_t num) -> std::array<Byte, 4>
+auto integerToFourBytes(size_t num) -> std::array<vm::Byte, 4>
 {
-    std::array<Byte, 4> result;
+    std::array<vm::Byte, 4> result;
     result[3] = num & 0xFF;
     unused(num >>= 8);
     result[2] = num & 0xFF;
@@ -17,7 +17,7 @@ auto integerToFourBytes(size_t num) -> std::array<Byte, 4>
 void Compiler::emitIndex(size_t index)
 {
     auto bytes = integerToFourBytes(index);
-    for (Byte i : bytes)
+    for (vm::Byte i : bytes)
     {
         instructions().push_back(i);
     }
@@ -28,22 +28,147 @@ void Compiler::emitVar(VarInfo const& varInfo)
     switch (varInfo.second)
     {
     case Scope::kGLOBAL:
-        instructions().push_back(kGET_GLOBAL);
+        instructions().push_back(vm::kGET_GLOBAL);
         emitIndex(varInfo.first);
         break;
     
     case Scope::kLOCAL:
-        instructions().push_back(kGET_LOCAL);
+        instructions().push_back(vm::kGET_LOCAL);
         emitIndex(varInfo.first);
         break;
     
     case Scope::kFREE:
-        instructions().push_back(kGET_FREE);
+        instructions().push_back(vm::kGET_FREE);
         emitIndex(varInfo.first);
         break;
 
     case Scope::kFUNCTION_SELF_REF:
-        FAIL_("Never reach here!");
+        instructions().push_back(vm::kCURRENT_FUNCTION);
+    }
+}
+
+void Compiler::emitApplication(Application const& app)
+{
+    auto nbOperands = app.mOperands.size();
+    auto const emitUnaryOp = [&app, this, nbOperands](vm::OpCode opCode)
+    {
+        ASSERT (nbOperands == 1)
+        compile(app.mOperands.at(0));
+        instructions().push_back(static_cast<vm::OpCode>(opCode));
+    };
+    auto const emitBinaryOps = [&app, this, nbOperands](vm::OpCode opCode)
+    {
+        compile(app.mOperands.at(0));
+        for (auto i = 1U; i < nbOperands; ++i)
+        {
+            compile(app.mOperands.at(i));
+            instructions().push_back(opCode);
+        }
+    };
+    bool isPrimitive = true;
+    // primitive procedure
+    {
+        auto opName = app.mOperator->toString();
+        if (opName == "+")
+        {
+            emitBinaryOps(vm::kADD);
+        }
+        else if (opName == "-")
+        {
+            ASSERT(nbOperands == 2U || nbOperands == 1U);
+            if (nbOperands == 2U)
+            {
+                emitBinaryOps(vm::kSUB);
+            }
+            else
+            {
+                emitUnaryOp(vm::kMINUS);
+            }
+        }
+        else if (opName == "*")
+        {
+            emitBinaryOps(vm::kMUL);
+        }
+        else if (opName == "/")
+        {
+            ASSERT(nbOperands == 2U);
+            emitBinaryOps(vm::kDIV);
+        }
+        else if (opName == "%")
+        {
+            ASSERT(nbOperands == 2U);
+            emitBinaryOps(vm::kMOD);
+        }
+        else if (opName == "=")
+        {
+            ASSERT(nbOperands == 2U);
+            emitBinaryOps(vm::kEQUAL);
+        }
+        else if (opName == "eq?")
+        {
+            ASSERT(nbOperands == 2U);
+            emitBinaryOps(vm::kEQUAL);
+        }
+        else if (opName == "<")
+        {
+            ASSERT(nbOperands == 2U);
+            emitBinaryOps(vm::kLESS_THAN);
+        }
+        else if (opName == "not")
+        {
+            ASSERT(nbOperands == 1U);
+            emitUnaryOp(vm::kNOT);
+        }
+        else if (opName == "cons")
+        {
+            ASSERT(nbOperands == 2U);
+            emitBinaryOps(vm::kCONS);
+        }
+        else if (opName == "car")
+        {
+            ASSERT(nbOperands == 1U);
+            emitUnaryOp(vm::kCAR);
+        }
+        else if (opName == "cdr")
+        {
+            ASSERT(nbOperands == 1U);
+            emitUnaryOp(vm::kCDR);
+        }
+        else if (opName == "cons?")
+        {
+            ASSERT(nbOperands == 1U);
+            emitUnaryOp(vm::kIS_CONS);
+        }
+        else if (opName == "null?")
+        {
+            ASSERT(nbOperands == 1U);
+            emitUnaryOp(vm::kIS_NULL);
+        }
+        else if (opName == "print")
+        {
+            ASSERT(nbOperands == 1U);
+            emitUnaryOp(vm::kPRINT);
+        }
+        else if (opName == "error")
+        {
+            ASSERT(nbOperands == 1U);
+            emitUnaryOp(vm::kERROR);
+        }
+        else
+        {
+            isPrimitive = false;
+        }
+    }
+    // lambda procedure.
+    if (isPrimitive == false)
+    {
+        for (auto const &o : app.mOperands)
+        {
+            compile(o);
+        }
+        compile(app.mOperator);
+        instructions().push_back(vm::kCALL);
+        emitIndex(app.mOperands.size());
     }
 }
 
@@ -53,31 +178,31 @@ void Compiler::compile(ExprPtr const& expr)
     if (auto numPtr = dynamic_cast<Number const*>(exprPtr))
     {
         auto const index = mCode.constantPool.size();
-        mCode.constantPool.push_back(numPtr->get());
-        instructions().push_back(kCONST);
+        mCode.constantPool.push_back(vm::Double{numPtr->get()});
+        instructions().push_back(vm::kCONST);
         emitIndex(index);
         return;
     }
     if (auto symPtr = dynamic_cast<Symbol const*>(exprPtr))
     {
         auto const index = mCode.constantPool.size();
-        mCode.constantPool.push_back(symPtr->toString());
-        instructions().push_back(kCONST);
+        mCode.constantPool.push_back(vm::Symbol{symPtr->toString()});
+        instructions().push_back(vm::kCONST);
         emitIndex(index);
         return;
     }
     if (auto strPtr = dynamic_cast<String const*>(exprPtr))
     {
         auto const index = mCode.constantPool.size();
-        mCode.constantPool.push_back(strPtr->get());
-        instructions().push_back(kCONST);
+        mCode.constantPool.push_back(vm::String{strPtr->get()});
+        instructions().push_back(vm::kCONST);
         emitIndex(index);
         return;
     }
     if (auto boolPtr = dynamic_cast<Bool const*>(exprPtr))
     {
-        instructions().push_back(kICONST);
-        emitIndex(boolPtr->get());
+        auto const ins = boolPtr->get() ? vm::kTRUE : vm::kFALSE;
+        instructions().push_back(ins);
         return;
     }
     if (auto defPtr = dynamic_cast<Definition const*>(exprPtr))
@@ -89,7 +214,7 @@ void Compiler::compile(ExprPtr const& expr)
         compile(defPtr->mValue);
         auto [index, scope] = define(defPtr->mVariableName);
         ASSERT (scope != Scope::kFUNCTION_SELF_REF);
-        auto setIns = scope == Scope::kLOCAL ? kSET_LOCAL : kSET_GLOBAL;
+        auto setIns = scope == Scope::kLOCAL ? vm::kSET_LOCAL : vm::kSET_GLOBAL;
         instructions().push_back(setIns);
         emitIndex(index);
         return;
@@ -100,7 +225,7 @@ void Compiler::compile(ExprPtr const& expr)
         auto const varInfo = resolve(name);
         if (varInfo.second == Scope::kFUNCTION_SELF_REF)
         {
-            instructions().push_back(kCURRENT_FUNCTION);
+            instructions().push_back(vm::kCURRENT_FUNCTION);
             return;
         }
         emitVar(varInfo);
@@ -109,7 +234,7 @@ void Compiler::compile(ExprPtr const& expr)
     if (auto ifPtr = dynamic_cast<If const*>(exprPtr))
     {
         compile(ifPtr->mPredicate);
-        instructions().push_back(kJUMP_IF_NOT_TRUE);
+        instructions().push_back(vm::kJUMP_IF_NOT_TRUE);
         // jump to alternative
         auto const jump0OperandIndex = instructions().size();
         for (size_t i = 0; i < 4; ++i)
@@ -117,7 +242,7 @@ void Compiler::compile(ExprPtr const& expr)
             instructions().push_back(0);
         }
         compile(ifPtr->mConsequent);
-        instructions().push_back(kJUMP);
+        instructions().push_back(vm::kJUMP);
         // jump to post alternative
         auto const jump1OperandIndex = instructions().size();
         for (size_t i = 0; i < 4; ++i)
@@ -170,7 +295,7 @@ void Compiler::compile(ExprPtr const& expr)
             ASSERT(scope == Scope::kLOCAL);
         }
         compile(lambdaPtr->mBody);
-        instructions().push_back(kRET);
+        instructions().push_back(vm::kRET);
         auto funcInstructions = std::get<0>(mFuncStack.top());
         auto const freeVars = symbolTable().freeVariables();
         auto const nbLocals = symbolTable().nbDefinitions() - args.size();
@@ -180,102 +305,35 @@ void Compiler::compile(ExprPtr const& expr)
             emitVar(f);
         }
         auto const index = mCode.constantPool.size();
-        auto const funcSym = FunctionSymbol{lambdaPtr->mName, args.size(), variadic, nbLocals, funcInstructions};
+        auto const funcSym = vm::FunctionSymbol{lambdaPtr->mName, args.size(), variadic, nbLocals, funcInstructions};
         mCode.constantPool.push_back(funcSym);
-        instructions().push_back(kCLOSURE);
+        instructions().push_back(vm::kCLOSURE);
         emitIndex(index);
         emitIndex(freeVars.size());
         return;
     }
     if (auto appPtr = dynamic_cast<Application const*>(exprPtr))
     {
-        auto nbOperands = appPtr->mOperands.size();
-        int32_t opCode = [appPtr, nbOperands] () -> int32_t
-        {
-            auto opName = appPtr->mOperator->toString();
-            if (opName == "+")
-            {
-                return kADD;
-            }
-            else if (opName == "-")
-            {
-                ASSERT(nbOperands == 2U || nbOperands == 1U);
-                return nbOperands == 2U ? kSUB : kMINUS;
-            }
-            else if (opName == "*")
-            {
-                return kMUL;
-            }
-            else if (opName == "/")
-            {
-                ASSERT(nbOperands == 2U);
-                return kDIV;
-            }
-            else if (opName == "=")
-            {
-                ASSERT(nbOperands == 2U);
-                return kEQUAL;
-            }
-            else if (opName == "!=")
-            {
-                ASSERT(nbOperands == 2U);
-                return kNOT_EQUAL;
-            }
-            else if (opName == ">")
-            {
-                ASSERT(nbOperands == 2U);
-                return kGREATER_THAN;
-            }
-            else if (opName == "!")
-            {
-                ASSERT(nbOperands == 1U);
-                return kNOT;
-            }
-            else if (opName == "cons")
-            {
-                ASSERT(nbOperands == 2U);
-                return kCONS;
-            }
-            else if (opName == "car")
-            {
-                ASSERT(nbOperands == 1U);
-                return kCAR;
-            }
-            else if (opName == "cdr")
-            {
-                ASSERT(nbOperands == 1U);
-                return kCDR;
-            }
-            return -1;
-        }();
-        // primitive procedure
-        if (opCode >= 0)
-        {
-            if (nbOperands == 1)
-            {
-                compile(appPtr->mOperands.at(0));
-                instructions().push_back(static_cast<OpCode>(opCode));
-                return;
-            }
-            compile(appPtr->mOperands.at(0));
-            for (auto i = 1U; i < nbOperands; ++i)
-            {
-                compile(appPtr->mOperands.at(i));
-                instructions().push_back(static_cast<OpCode>(opCode));
-            }
-            return;
-        }
-        // lambda procedure.
-        {
-            for (auto const& o : appPtr->mOperands)
-            {
-                compile(o);
-            }
-            compile(appPtr->mOperator);
-            instructions().push_back(kCALL);
-            emitIndex(appPtr->mOperands.size());
-        }
+        emitApplication(*appPtr);
         return;
     }
-    FAIL_("Not supported yet!");
+    if (dynamic_cast<Null const*>(exprPtr))
+    {
+        instructions().push_back(vm::kNULL);
+        return;
+    }
+    if (auto consPtr = dynamic_cast<Cons const*>(exprPtr))
+    {
+        compile(consPtr->car());
+        compile(consPtr->cdr());
+        instructions().push_back(vm::kCONS);
+        return;
+    }
+    if (auto splicingPtr = dynamic_cast<Splicing const*>(exprPtr))
+    {
+        compile(splicingPtr->get());
+        instructions().push_back(vm::kSPLICING);
+        return;
+    }
+    FAIL_MSG("Not supported yet!", exprPtr->toString());
 }

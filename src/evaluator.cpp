@@ -13,9 +13,9 @@ ExprPtr false_()
     return f;
 }
 
-ExprPtr nil()
+ExprPtr null()
 {
-    static ExprPtr n{new Nil{}};
+    static ExprPtr n{new Null{}};
     return n;
 }
 
@@ -41,7 +41,7 @@ ExprPtr MacroProcedure::apply(std::vector<std::shared_ptr<Expr> > const &args)
 
 ExprPtr vecToCons(std::vector<ExprPtr> const& vec)
 {
-    auto result = nil();
+    auto result = null();
     auto vecSize = vec.size();
     auto i = vec.rbegin();
     if (vecSize >= 2)
@@ -67,7 +67,7 @@ std::vector<ExprPtr> consToVec(ExprPtr const& expr)
 {
     std::vector<ExprPtr> vec;
     auto me = expr;
-    while (me != nil())
+    while (me != null())
     {
         auto [car, cdr] = deCons(me);
         vec.push_back(car);
@@ -81,7 +81,7 @@ auto expandMacros(ExprPtr const& expr, std::shared_ptr<Env> const& env) -> ExprP
     if (auto macroDefinition = parseMacroDefinition(expr))
     {
         macroDefinition->eval(env);
-        return nil();
+        return null();
     }
     if (auto e = tryMacroCall(expr, env))
     {

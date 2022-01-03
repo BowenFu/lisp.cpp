@@ -1,5 +1,6 @@
 set(lisp_SAMPLES
-loop
+interpret
+compile
 )
 
 foreach(sample ${lisp_SAMPLES})
@@ -10,7 +11,10 @@ foreach(sample ${lisp_SAMPLES})
 endforeach()
 
 macro (do_test test_name arg result)
-    add_test(${test_name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/loop ${arg})
+    add_test(${test_name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/interpret ${arg})
+    set_tests_properties(${test_name}
+      PROPERTIES PASS_REGULAR_EXPRESSION ${result})
+    add_test(${test_name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/compile ${arg})
     set_tests_properties(${test_name}
       PROPERTIES PASS_REGULAR_EXPRESSION ${result})
 endmacro (do_test)
@@ -18,18 +22,18 @@ endmacro (do_test)
 do_test(test_1 "1" 1)
 do_test(test_lambda "((lambda () 1))" 1)
 do_test(test_lambda "((lambda (x) x) 2)" 2)
-do_test(test_null1 "(null? nil)" true)
+do_test(test_null1 "(null? null)" true)
 do_test(test_null2 "(null? 2)" false)
-do_test(test_pair1 "(pair? (list 1))" true)
-do_test(test_pair2 "(pair? nil)" false)
-do_test(test_pair3 "(pair? 2)" false)
+do_test(test_pair1 "(cons? (list 1))" true)
+do_test(test_pair2 "(cons? null)" false)
+do_test(test_pair3 "(cons? 2)" false)
 do_test(test_eq1 "(eq? true true)" true)
 do_test(test_eq2 "(eq? true false)" false)
 do_test(test_eq3 "(eq? true 2)" false)
 do_test(test_eq4 "(eq? 2 2)" true)
 do_test(test_eq5 "(eq? 2 3)" false)
-do_test(test_eq6 "(eq? 2 nil)" false)
-do_test(test_eq7 "(eq? nil nil)" true)
+do_test(test_eq6 "(eq? 2 null)" false)
+do_test(test_eq7 "(eq? null null)" true)
 do_test(test_eq8 "(eq? (list 2) (list 2))" true)
 
 do_test(test_define_proc "(define (x) 2) (x)" 2)
@@ -105,14 +109,14 @@ do_test(test_cond4
 
 do_test(test_quote_num "(quote 2)" 2)
 do_test(test_quote_id "(quote x)" "'x")
-do_test(test_quote_nil "(quote ())" "()")
+do_test(test_quote_null "(quote ())" "()")
 do_test(test_quote_list "(quote (1 xy 23))" "(1 'xy 23)")
 do_test(test_quote_sym "(quote (quote x))" "('quote 'x)")
 do_test(test_quote_quoted_list "(quote (quote (x)))" "\\\\('quote \\\\('x\\\\)\\\\)")
 
 do_test(test_short_quote_num "'2" 2)
 do_test(test_short_quote_id "' x" "'x")
-do_test(test_short_quote_nil "'()" "()")
+do_test(test_short_quote_null "'()" "()")
 do_test(test_short_quote_list "'(1 xy 23)" "(1 'xy 23)")
 do_test(test_short_quote_sym "''x" "('quote 'x)")
 do_test(test_short_quote_quoted_list "''(x)" "\\\\('quote \\\\('x\\\\)\\\\)")
@@ -138,7 +142,7 @@ do_test(test_macro_first "(define rest (macro (x) `(cdr ',x))) (rest (+ 1 1))" "
 do_test(test_macro_first "(define replaceOp (macro (orig op) `(,op . ,(cdr orig)))) (replaceOp (+ 3 3) *)" "9")
 
 do_test(test_bind_to_param_list "(define mylist (lambda x x)) (mylist 1 2 3)" "\\\\(1 2 3\\\\)")
-do_test(test_cons_pred "cons? (cons? (cons 1 2))" "true")
+do_test(test_cons_pred "(cons? (cons 1 2))" true)
 do_test(test_list "(list 1 2)" "(1 2)")
 do_test(test_list_star "(list* 1 2)" "(1 . 2)")
 
@@ -153,13 +157,13 @@ do_test(test_unquote-splicing-nested "`(1 ```,,@,,@(list (+ 1 2)) 4)" "\\\\(1 \\
 do_test(test_unquote-splicing "(let ((x '(1))) `(,@x 1))" "\\\\(1 1\\\\)")
 do_test(test_unquote-splicing2 "`(1 2 ,@(list (+ 1 2) (- 5 1)) 5)" "\\\\(1 2 3 4 5\\\\)")
 
-do_test(test_and_1 "(and)" "true")
-do_test(test_and_2 "(and 1)" "1")
+do_test(test_and_1 "(and)" true)
+do_test(test_and_2 "(and 2)" "2")
 do_test(test_and_3 "(and 1 \"2\")" "\"2\"")
 do_test(test_and_4 "(and 1 \"2\" 'x)" "\'x")
 do_test(test_and_5 "(and (or 1 \"2\") 'x)" "\'x")
 
-do_test(test_or_1 "(or)" "false")
+do_test(test_or_1 "(or)" false)
 do_test(test_or_2 "(or 1)" "1")
 do_test(test_or_3 "(or \"2\" 1)" "\"2\"")
 do_test(test_or_4 "(or 'x \"2\" 1)" "\'x")

@@ -5,6 +5,7 @@ target_sources(lisp PRIVATE
 evaluator.cpp
 vm.cpp
 compiler.cpp
+primitiveProcedure.cpp
 )
 
 target_compile_options(lisp PRIVATE ${BASE_COMPILE_FLAGS})

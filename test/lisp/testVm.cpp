@@ -4,17 +4,17 @@
 
 TEST(VM, add)
 {
-    std::vector<Byte> const instructions = {kICONST, 0, 0, 0, 1, kICONST, 0, 0, 0, 2, kIADD};
-    VM vm{ByteCode{instructions, {}}};
+    std::vector<vm::Byte> const instructions = {vm::kICONST, 0, 0, 0, 1, vm::kICONST, 0, 0, 0, 2, vm::kIADD};
+    vm::VM vm{vm::ByteCode{instructions, {}}};
     vm.run();
     auto result = vm.peekOperandStack();
-    EXPECT_EQ(std::get<int32_t>(result), 3);
+    EXPECT_EQ(std::get<vm::Int>(result).value, 3);
 }
 
 TEST(VM, print)
 {
-    std::vector<Byte> const instructions = {kICONST, 0, 0, 0, 1, kICONST, 0, 0, 0, 2, kIADD, kPRINT};
-    VM vm{ByteCode{instructions, {}}};
+    std::vector<vm::Byte> const instructions = {vm::kICONST, 0, 0, 0, 1, vm::kICONST, 0, 0, 0, 2, vm::kIADD, vm::kPRINT};
+    vm::VM vm{vm::ByteCode{instructions, {}}};
     testing::internal::CaptureStdout();
     vm.run();
     std::string output = testing::internal::GetCapturedStdout();
@@ -23,20 +23,20 @@ TEST(VM, print)
 
 TEST(VM, str)
 {
-    std::vector<Byte> const instructions = {kCONST, 0, 0, 0, 0, kPRINT};
-    VM vm{ByteCode{instructions, {"some str: 123"}}};
+    std::vector<vm::Byte> const instructions = {vm::kCONST, 0, 0, 0, 0, vm::kPRINT};
+    vm::VM vm{vm::ByteCode{instructions, {vm::String{"some str: 123"}}}};
     testing::internal::CaptureStdout();
     vm.run();
     std::string output = testing::internal::GetCapturedStdout();
-    EXPECT_EQ(output, "some str: 123\n");
+    EXPECT_EQ(output, "\"some str: 123\"\n");
 }
 
 TEST(VM, cons)
 {
-    std::vector<Byte> const instructions = {kCONST, 0, 0, 0, 0, kCONST, 0, 0, 0, 1, kCONS, kCAR, kPRINT};
-    VM vm{ByteCode{instructions, {"some str: 123", 12345}}};
+    std::vector<vm::Byte> const instructions = {vm::kCONST, 0, 0, 0, 0, vm::kCONST, 0, 0, 0, 1, vm::kCONS, vm::kCAR, vm::kPRINT};
+    vm::VM vm{vm::ByteCode{instructions, {vm::String{"some str: 123"}, vm::Int{12345}}}};
     testing::internal::CaptureStdout();
     vm.run();
     std::string output = testing::internal::GetCapturedStdout();
-    EXPECT_EQ(output, "some str: 123\n");
+    EXPECT_EQ(output, "\"some str: 123\"\n");
 }

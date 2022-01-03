@@ -77,6 +77,18 @@ public:
             }
             return true_();
         }
+        if (str == "true")
+        {
+            return true_();
+        }
+        if (str == "false")
+        {
+            return false_();
+        }
+        if (str == "null")
+        {
+            return null();
+        }
         return ExprPtr{new RawWord(str)};
     }
 

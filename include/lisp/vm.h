@@ -9,6 +9,8 @@
 #include <memory>
 #include "meta.h"
 
+namespace vm
+{
 using Byte = uint8_t;
 
 enum OpCode : Byte
@@ -31,9 +33,9 @@ enum OpCode : Byte
     kGET_FREE,
     kTRUE,
     kFALSE,
+    kNULL,
     kEQUAL,
-    kNOT_EQUAL,
-    kGREATER_THAN,
+    kLESS_THAN,
     kNOT,
     kMINUS,
     kJUMP,
@@ -43,7 +45,12 @@ enum OpCode : Byte
     kCAR,
     kCDR,
     kCURRENT_FUNCTION,
-    kCLOSURE
+    kCLOSURE,
+    kIS_CONS,
+    kIS_NULL,
+    kERROR,
+    kMOD,
+    kSPLICING,
 };
 
 using Instructions = std::vector<Byte>;
@@ -92,12 +99,36 @@ class VMCons;
 using ConsPtr = std::shared_ptr<VMCons>;
 
 
-class VMNil
+class VMNull
 {};
 
-inline constexpr VMNil vmNil{};
+inline constexpr VMNull vmNull{};
 
-using Object = std::variant<int32_t, double, std::string, FunctionSymbol, ClosurePtr, ConsPtr, VMNil>;
+template <typename T>
+class Literal
+{
+public:
+    T value;
+};
+
+using Bool = Literal<bool>;
+using Int = Literal<int32_t>;
+using Double = Literal<double>;
+using String = Literal<std::string>;
+
+class Symbol
+{
+public:
+    std::string value;
+};
+
+class Splicing
+{
+public:
+    ConsPtr value;
+};
+
+using Object = std::variant<Bool, Int, Double, String, Symbol, FunctionSymbol, ClosurePtr, ConsPtr, VMNull, Splicing>;
 
 class Closure
 {
@@ -136,6 +167,7 @@ public:
     {
         return mCdr;
     }
+    std::string toString() const;
 };
 
 inline ConsPtr cons(Object const& car_, Object const& cdr_)
@@ -221,5 +253,7 @@ auto fourBytesToInteger(Byte const* buffer) -> T
 {
     return static_cast<T>(buffer[0] << 24 | buffer[1] << 16 | buffer[2] << 8 | buffer[3]);
 }
+
+} // namespace vm
 
 #endif // LISP_VM_H
