@@ -1,5 +1,5 @@
 set(lisp_SAMPLES
-loop
+interpret
 )
 
 foreach(sample ${lisp_SAMPLES})
@@ -10,7 +10,7 @@ foreach(sample ${lisp_SAMPLES})
 endforeach()
 
 macro (do_test test_name arg result)
-    add_test(${test_name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/loop ${arg})
+    add_test(${test_name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/interpret ${arg})
     set_tests_properties(${test_name}
       PROPERTIES PASS_REGULAR_EXPRESSION ${result})
 endmacro (do_test)
