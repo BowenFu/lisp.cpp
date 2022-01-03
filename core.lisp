@@ -5,6 +5,7 @@
         (+ 1 (len (cdr lst)))
     )
 )
+
 (define let (macro name-arg-param-pairs-body
     (define arg-num (len name-arg-param-pairs-body))
     (if (= arg-num 2)
@@ -132,7 +133,7 @@
 
 (define atom?
     (lambda (x)
-    (and (not (pair? x)) (not (null? x)))))
+    (and (not (cons? x)) (not (null? x)))))
 
 (define not
     (lambda (x)
@@ -169,12 +170,12 @@
 (define list*
        (lambda args
         (define $f
-        (lambda (xs)
-            (if (cons? xs)
-                (if (cons? (cdr xs))
-                    (cons (car xs) ($f (cdr xs)))
-                    (car xs))
-                nil)))
+            (lambda (xs)
+                (if (cons? xs)
+                    (if (cons? (cdr xs))
+                        (cons (car xs) ($f (cdr xs)))
+                        (car xs))
+                    null)))
         ($f args)
        ))
 

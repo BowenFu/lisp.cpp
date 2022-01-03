@@ -86,13 +86,19 @@ public:
     {
         return mNbDefinitions;
     }
+    VarInfo defineCurrentFunction(std::string const& name)
+    {
+        auto const varInfo = VarInfo{0, Scope::kFUNCTION_SELF_REF};
+        mNameToVarInfo[name] = varInfo;
+        return varInfo;
+    }
 };
 
 class Compiler
 {
     SymbolTable mSymbolTable{};
-    ByteCode mCode{};
-    using FuncInfo = std::tuple<Instructions, SymbolTable, std::string>;
+    vm::ByteCode mCode{};
+    using FuncInfo = std::tuple<vm::Instructions, SymbolTable>;
     std::stack<FuncInfo> mFuncStack{};
     auto& instructions()
     {
@@ -120,19 +126,12 @@ class Compiler
         {
             return varInfo.value();
         }
-        // first local args, then self
-        if (name == std::get<2>(funcInfo))
-        {
-            return {0, Scope::kFUNCTION_SELF_REF};
-        }
-        FAIL_("Resolve failed!");
+        FAIL_MSG("Resolve failed!", name);
     }
     VarInfo defineCurrentFunction(std::string const& name)
     {
         ASSERT(!mFuncStack.empty());
-        std::get<2>(mFuncStack.top()) = name;
-        auto const scope = Scope::kFUNCTION_SELF_REF;
-        return {0, scope};
+        return symbolTable().defineCurrentFunction(name);
     }
     VarInfo define(std::string const& name)
     {
@@ -142,7 +141,7 @@ class Compiler
 public:
     Compiler() = default;
     void compile(ExprPtr const& expr);
-    ByteCode code() const
+    vm::ByteCode code() const
     {
         return mCode;
     }

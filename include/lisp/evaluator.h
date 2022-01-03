@@ -82,7 +82,7 @@ public:
     {
         if (mFrame.count(variableName))
         {
-            throw std::runtime_error{"call defineVariable to defined variables." + variableName};
+            throw std::runtime_error{"call defineVariable to defined variables: " + variableName};
         }
         mFrame.insert({variableName, value});
         return value;
@@ -225,15 +225,15 @@ public:
     }
 };
 
-ExprPtr nil();
+ExprPtr null();
 
-class Nil final: public Expr
+class Null final: public Expr
 {
 public:
-    Nil() = default;
+    Null() = default;
     ExprPtr eval(std::shared_ptr<Env> const& /* env */) override
     {
-        return nil();
+        return null();
     }
     std::string toString() const override
     {
@@ -296,7 +296,7 @@ public:
             auto cdrStrSize = cdrStr.size();
             o << " " << cdrStr.substr(1U, cdrStrSize - 2);
         }
-        else if (mCdr == nil())
+        else if (mCdr == null())
         {
         }
         else
@@ -328,7 +328,7 @@ public:
 template <typename Iter>
 ExprPtr reverseVecToCons(Iter begin, Iter end)
 {
-    auto result = nil();
+    auto result = null();
     for (auto i = begin; i != end; ++i)
     {
         result = ExprPtr{new Cons{*i, result}};

@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cmath>
 
+namespace vm{
 std::ostream& operator << (std::ostream& o, StackFrame const& f)
 {
     return o << "StackFrame " << f.closure()->funcSym().name();
@@ -18,26 +19,101 @@ std::ostream& operator << (std::ostream& o, ClosurePtr const& c)
     return o << "Closure " << c->funcSym().name();
 }
 
-std::ostream& operator << (std::ostream& o, VMNil)
+std::ostream& operator << (std::ostream& o, VMNull)
 {
-    return o << "nil";
+    return o << "null";
+}
+
+bool operator== (FunctionSymbol const& lhs, FunctionSymbol const& rhs)
+{
+    return lhs.name() == rhs.name() &&
+           lhs.nbArgs() == rhs.nbArgs() &&
+           lhs.variadic() == rhs.variadic() &&
+           lhs.nbLocals() == rhs.nbLocals() &&
+           lhs.instructions() == rhs.instructions();
+}
+
+template <typename T>
+constexpr bool operator== (Literal<T> const& lhs, Literal<T> const& rhs)
+{
+    return lhs.value == rhs.value;
+}
+
+bool operator== (Symbol const& lhs, Symbol const& rhs)
+{
+    return lhs.value == rhs.value;
+}
+
+constexpr bool operator== (VMNull const&, VMNull const&)
+{
+    return true;
+}
+
+constexpr bool operator== (ConsPtr const& lhs, ConsPtr const& rhs)
+{
+    if (lhs.get() == rhs.get())
+    {
+        return true;
+    }
+    if (!lhs || !rhs)
+    {
+        return false;
+    }
+    return lhs->car() == rhs->car() && lhs->cdr() == rhs->cdr();
+}
+
+template <typename T>
+std::ostream& operator << (std::ostream& o, Literal<T> const& obj)
+{
+    return o << obj.value;
+}
+
+std::ostream& operator << (std::ostream& o, Symbol const& obj)
+{
+    return o << obj.value;
+}
+
+std::ostream& operator << (std::ostream& o, String const& obj)
+{
+    return o << "\"" << obj.value << "\"";
 }
 
 std::ostream& operator << (std::ostream& o, Object const& obj);
 
+std::string VMCons::toString() const
+{
+    std::ostringstream o;
+    o << "(" << mCar;
+    if (auto const consPtrPtr = std::get_if<ConsPtr>(&mCdr))
+    {
+        auto cdrStr = (*consPtrPtr)->toString();
+        auto cdrStrSize = cdrStr.size();
+        o << " " << cdrStr.substr(1U, cdrStrSize - 2);
+    }
+    else if (std::get_if<VMNull>(&mCdr))
+    {
+    }
+    else
+    {
+        o << " . " << mCdr;
+    }
+    o << ")";
+    return o.str();
+}
+} // namespace vm
+
 namespace std
 {
-std::ostream& operator << (std::ostream& o, ConsPtr const& cons_)
+std::ostream& operator << (std::ostream& o, vm::ConsPtr const& cons_)
 {
-    o << "(";
-    o << car(cons_);
-    o << " . ";
-    o << cdr(cons_);
-    o << ")";
+    ASSERT(cons_);
+    o << cons_->toString();
     return o;
 }
 }
 
+namespace vm
+{
 std::ostream& operator << (std::ostream& o, Object const& obj)
 {
     std::visit([&o](auto op)
@@ -60,17 +136,27 @@ void VM::run()
         {
             int32_t word = fourBytesToInteger<int32_t>(&instructions()[mIp]);
             mIp += 4;
-            operandStack().push(word);
+            operandStack().push(Int{word});
             break;
         }
         case kIADD:
         {
-            int32_t rhs = std::get<int32_t>(operandStack().top());
+            auto const rhs = std::get<Int>(operandStack().top());
             operandStack().pop();
-            int32_t lhs = std::get<int32_t>(operandStack().top());
+            auto const lhs = std::get<Int>(operandStack().top());
             operandStack().pop();
-            int32_t result = lhs + rhs;
-            operandStack().push(result);
+            int32_t result = lhs.value + rhs.value;
+            operandStack().push(Int{result});
+            break;
+        }
+        case kEQUAL:
+        {
+            auto const rhs = operandStack().top();
+            operandStack().pop();
+            auto const lhs = operandStack().top();
+            operandStack().pop();
+            bool result = lhs == rhs;
+            operandStack().push(Bool{result});
             break;
         }
         case kADD:
@@ -78,75 +164,59 @@ void VM::run()
         case kMUL:
         case kDIV:
         case kMOD:
-        case kEQUAL:
-        case kNOT_EQUAL:
-        case kGREATER_THAN:
+        case kLESS_THAN:
         {
             auto const rhs = operandStack().top();
             operandStack().pop();
             auto const lhs = operandStack().top();
             operandStack().pop();
-            if (auto lhsDPtr = std::get_if<double>(&lhs))
+            if (auto lhsDPtr = std::get_if<Double>(&lhs))
             {
                 auto lhsD = *lhsDPtr;
-                auto rhsD = std::get<double>(rhs);
+                auto rhsD = std::get<Double>(rhs);
                 switch (opCode)
                 {
                 case kADD:
                 {
-                    double result = lhsD + rhsD;
-                    operandStack().push(result);
+                    double result = lhsD.value + rhsD.value;
+                    operandStack().push(Double{result});
                     break;
                 }
                 
                 case kSUB:
                 {
-                    double result = lhsD - rhsD;
-                    operandStack().push(result);
+                    double result = lhsD.value - rhsD.value;
+                    operandStack().push(Double{result});
                     break;
                 }
                 
                 case kMUL:
                 {
-                    double result = lhsD * rhsD;
-                    operandStack().push(result);
+                    double result = lhsD.value * rhsD.value;
+                    operandStack().push(Double{result});
                     break;
                 }
                 
                 case kDIV:
                 {
-                    double result = lhsD / rhsD;
-                    operandStack().push(result);
+                    double result = lhsD.value / rhsD.value;
+                    operandStack().push(Double{result});
                     break;
                 }
                 
                 case kMOD:
                 {
-                    ASSERT(std::trunc(lhsD) == lhsD);
-                    ASSERT(std::trunc(rhsD) == rhsD);
-                    double result = static_cast<int32_t>(lhsD) % static_cast<int32_t>(rhsD);
-                    operandStack().push(result);
+                    ASSERT(std::trunc(lhsD.value) == lhsD.value);
+                    ASSERT(std::trunc(rhsD.value) == rhsD.value);
+                    double result = static_cast<int32_t>(lhsD.value) % static_cast<int32_t>(rhsD.value);
+                    operandStack().push(Double{result});
                     break;
                 }
                 
-                case kEQUAL:
+                case kLESS_THAN:
                 {
-                    bool result = lhsD == rhsD;
-                    operandStack().push(result);
-                    break;
-                }
-
-                case kNOT_EQUAL:
-                {
-                    bool result = lhsD != rhsD;
-                    operandStack().push(result);
-                    break;
-                }
-
-                case kGREATER_THAN:
-                {
-                    bool result = lhsD > rhsD;
-                    operandStack().push(result);
+                    bool result = lhsD.value < rhsD.value;
+                    operandStack().push(Bool{result});
                     break;
                 }
 
@@ -154,33 +224,19 @@ void VM::run()
                     FAIL_("Unsupported op");
                 }
             }
-            else if (auto lhsStrPtr = std::get_if<std::string>(&lhs))
+            else if (auto lhsStrPtr = std::get_if<String>(&lhs))
             {
                 auto lhsStr = *lhsStrPtr;
-                auto rhsStr = std::get<std::string>(rhs);
+                auto rhsStr = std::get<String>(rhs);
                 switch (opCode)
                 {
                 case kADD:
                 {
-                    auto result = lhsStr + rhsStr;
-                    operandStack().push(result);
+                    auto result = lhsStr.value + rhsStr.value;
+                    operandStack().push(String{result});
                     break;
                 }
                 
-                case kEQUAL:
-                {
-                    bool result = lhsStr == rhsStr;
-                    operandStack().push(result);
-                    break;
-                }
-
-                case kNOT_EQUAL:
-                {
-                    bool result = lhsStr != rhsStr;
-                    operandStack().push(result);
-                    break;
-                }
-
                 default:
                     FAIL_("Unsupported op");
                 }
@@ -193,16 +249,16 @@ void VM::run()
         }
         case kNOT:
         {
-            auto num = std::get<int32_t>(operandStack().top());
+            auto value = std::get<Bool>(operandStack().top());
             operandStack().pop();
-            operandStack().push(!num);
+            operandStack().push(Bool{!value.value});
             break;
         }
         case kMINUS:
         {
-            auto num = std::get<double>(operandStack().top());
+            auto num = std::get<Double>(operandStack().top());
             operandStack().pop();
-            operandStack().push(-num);
+            operandStack().push(Double{-num.value});
             break;
         }
         case kCONST:
@@ -253,13 +309,13 @@ void VM::run()
             else
             {
                 auto nbRest = nbParams + 1 - nbArgs; 
-                Object rest = vmNil;
+                Object rest = vmNull;
                 for (size_t i = 0; i < nbRest; ++i)
                 {
                     rest = cons(operandStack().top(), rest);
                     operandStack().pop();
                 }
-                params.back() = rest;
+                params.at(nbArgs - 1) = rest;
                 for (size_t i = nbArgs - 1; i > 0; --i)
                 {
                     params.at(i - 1) = operandStack().top();
@@ -296,12 +352,17 @@ void VM::run()
         }
         case kTRUE:
         {
-            operandStack().push(true);
+            operandStack().push(Bool{true});
             break;
         }
         case kFALSE:
         {
-            operandStack().push(false);
+            operandStack().push(Bool{false});
+            break;
+        }
+        case kNULL:
+        {
+            operandStack().push(vmNull);
             break;
         }
         case kJUMP:
@@ -312,9 +373,11 @@ void VM::run()
         }
         case kJUMP_IF_NOT_TRUE:
         {
-            auto pred = std::get<int32_t>(operandStack().top());
+            auto predPtr = std::get_if<Bool>(&operandStack().top());
             operandStack().pop();
-            if (!pred)
+            // not false => true
+            auto const isTrue = (predPtr == nullptr || predPtr->value);
+            if (!isTrue)
             {
                 uint32_t index = fourBytesToInteger<uint32_t>(&instructions()[mIp]);
                 mIp = index;
@@ -408,17 +471,18 @@ void VM::run()
             auto const obj = operandStack().top();
             operandStack().pop();
             auto const consPtrPtr = std::get_if<ConsPtr>(&obj);
-            operandStack().push(consPtrPtr != nullptr);
+            operandStack().push(Bool{consPtrPtr != nullptr});
             break;
         }
         case kIS_NULL:
         {
             auto const obj = operandStack().top();
             operandStack().pop();
-            auto const nilPtr = std::get_if<VMNil>(&obj);
-            operandStack().push(nilPtr != nullptr);
+            auto const nilPtr = std::get_if<VMNull>(&obj);
+            operandStack().push(Bool{nilPtr != nullptr});
             break;
         }
         }
     }
 }
+} // namespace vm
