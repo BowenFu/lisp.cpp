@@ -24,7 +24,7 @@ void print(std::ostream& o, VMNull)
     o << "null";
 }
 
-constexpr bool operator== (ConsPtr const& lhs, ConsPtr const& rhs);
+bool operator== (ConsPtr const& lhs, ConsPtr const& rhs);
 
 bool operator== (FunctionSymbol const& lhs, FunctionSymbol const& rhs)
 {
@@ -56,7 +56,7 @@ constexpr bool operator== (VMNull const&, VMNull const&)
     return true;
 }
 
-constexpr bool operator== (ConsPtr const& lhs, ConsPtr const& rhs)
+bool operator== (ConsPtr const& lhs, ConsPtr const& rhs)
 {
     if (lhs.get() == rhs.get())
     {
@@ -545,8 +545,8 @@ void VM::run()
         {
             auto const obj = operandStack().top();
             operandStack().pop();
-            auto const nilPtr = std::get_if<VMNull>(&obj);
-            operandStack().push(Bool{nilPtr != nullptr});
+            auto const nullPtr = std::get_if<VMNull>(&obj);
+            operandStack().push(Bool{nullPtr != nullptr});
             break;
         }
         }

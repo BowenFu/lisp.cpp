@@ -317,7 +317,7 @@ void Compiler::compile(ExprPtr const& expr)
         emitApplication(*appPtr);
         return;
     }
-    if (auto nilPtr = dynamic_cast<Null const*>(exprPtr))
+    if (dynamic_cast<Null const*>(exprPtr))
     {
         instructions().push_back(vm::kNULL);
         return;
