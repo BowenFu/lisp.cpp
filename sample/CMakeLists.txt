@@ -22,19 +22,19 @@ endmacro (do_test)
 do_test(test_1 "1" 1)
 do_test(test_lambda "((lambda () 1))" 1)
 do_test(test_lambda "((lambda (x) x) 2)" 2)
-do_test(test_null1 "(null? null)" true|1)
-do_test(test_null2 "(null? 2)" false|0)
-do_test(test_pair1 "(cons? (list 1))" true|1)
-do_test(test_pair2 "(cons? null)" false|0)
-do_test(test_pair3 "(cons? 2)" false|0)
-do_test(test_eq1 "(eq? true true)" true|1)
-do_test(test_eq2 "(eq? true false)" false|0)
-do_test(test_eq3 "(eq? true 2)" false|0)
-do_test(test_eq4 "(eq? 2 2)" true|1)
-do_test(test_eq5 "(eq? 2 3)" false|0)
-do_test(test_eq6 "(eq? 2 null)" false|0)
-do_test(test_eq7 "(eq? null null)" true|1)
-do_test(test_eq8 "(eq? (list 2) (list 2))" true|1)
+do_test(test_null1 "(null? null)" true)
+do_test(test_null2 "(null? 2)" false)
+do_test(test_pair1 "(cons? (list 1))" true)
+do_test(test_pair2 "(cons? null)" false)
+do_test(test_pair3 "(cons? 2)" false)
+do_test(test_eq1 "(eq? true true)" true)
+do_test(test_eq2 "(eq? true false)" false)
+do_test(test_eq3 "(eq? true 2)" false)
+do_test(test_eq4 "(eq? 2 2)" true)
+do_test(test_eq5 "(eq? 2 3)" false)
+do_test(test_eq6 "(eq? 2 null)" false)
+do_test(test_eq7 "(eq? null null)" true)
+do_test(test_eq8 "(eq? (list 2) (list 2))" true)
 
 do_test(test_define_proc "(define (x) 2) (x)" 2)
 do_test(test_cond1 "(define x #t) (cond (x 1) (else 2))" 1)
@@ -53,15 +53,15 @@ do_test(test_string1
             )))))
 (member? \"abc\" (list 1 \"abcd\"))
 "
-false|0)
+false)
 
-do_test(test_string2 " (eq? \"abc\" \"abc\") " true|1)
+do_test(test_string2 " (eq? \"abc\" \"abc\") " true)
 
 do_test(test_string3
 "
 (eq? \"abc\" \"abcd\")
 "
-false|0)
+false)
 
 do_test(test_string4
 "
@@ -74,7 +74,7 @@ do_test(test_string4
             )))))
 (member? \"abc\" (list 1 \"abc\"))
 "
-true|1)
+true)
 
 do_test(test_remember
 "
@@ -142,7 +142,7 @@ do_test(test_macro_first "(define rest (macro (x) `(cdr ',x))) (rest (+ 1 1))" "
 do_test(test_macro_first "(define replaceOp (macro (orig op) `(,op . ,(cdr orig)))) (replaceOp (+ 3 3) *)" "9")
 
 do_test(test_bind_to_param_list "(define mylist (lambda x x)) (mylist 1 2 3)" "\\\\(1 2 3\\\\)")
-do_test(test_cons_pred "(cons? (cons 1 2))" true|1)
+do_test(test_cons_pred "(cons? (cons 1 2))" true)
 do_test(test_list "(list 1 2)" "(1 2)")
 do_test(test_list_star "(list* 1 2)" "(1 . 2)")
 
@@ -157,13 +157,13 @@ do_test(test_unquote-splicing-nested "`(1 ```,,@,,@(list (+ 1 2)) 4)" "\\\\(1 \\
 do_test(test_unquote-splicing "(let ((x '(1))) `(,@x 1))" "\\\\(1 1\\\\)")
 do_test(test_unquote-splicing2 "`(1 2 ,@(list (+ 1 2) (- 5 1)) 5)" "\\\\(1 2 3 4 5\\\\)")
 
-do_test(test_and_1 "(and)" true|1)
+do_test(test_and_1 "(and)" true)
 do_test(test_and_2 "(and 2)" "2")
 do_test(test_and_3 "(and 1 \"2\")" "\"2\"")
 do_test(test_and_4 "(and 1 \"2\" 'x)" "\'x")
 do_test(test_and_5 "(and (or 1 \"2\") 'x)" "\'x")
 
-do_test(test_or_1 "(or)" false|0)
+do_test(test_or_1 "(or)" false)
 do_test(test_or_2 "(or 1)" "1")
 do_test(test_or_3 "(or \"2\" 1)" "\"2\"")
 do_test(test_or_4 "(or 'x \"2\" 1)" "\'x")
