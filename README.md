@@ -1,6 +1,10 @@
 # lisp.cpp
 
-lisp : a simple lisp interpreter in C++ with scheme style syntax + quote / unquote style macros.
+lisp : a simple lisp interpreter / compiler in C++ with scheme style syntax + quote / unquote style macros.
+
+The interpreter is inspired by SICP.
+
+The macro system and the compiler is inspired by `Writing an interpreter / a compiler in Go`.
 
 <!-- ![lisp](./lisp.svg) -->
 
